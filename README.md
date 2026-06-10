@@ -15,7 +15,7 @@ Realtime operational dashboard for BullMQ. AGPL-3.0 licensed.
 ## Requirements
 
 - Node.js 24+
-- pnpm 10+
+- pnpm 11+
 - [Doppler CLI](https://docs.doppler.com/docs/install-cli)
 - PostgreSQL 18+ (`DATABASE_URL`)
 - Redis (`REDIS_URL`, optional; separate from your BullMQ Redis instances)

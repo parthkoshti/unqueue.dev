@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
-    "@orpc/client": "^1.6.6",
-    "@orpc/tanstack-query": "^1.6.6",
+    "@orpc/client": "^1.14.5",
+    "@orpc/tanstack-query": "^1.14.5",
     "@tanstack/react-form": "^1.12.4",
     "@tanstack/react-query": "^5.81.5",
     "@tanstack/react-router": "^1.121.34",
@@ -39,7 +39,7 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@orpc/server": "^1.6.6",
+    "@orpc/server": "^1.14.5",
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/router-plugin": "^1.121.34",
     "@types/react": "^19.1.8",

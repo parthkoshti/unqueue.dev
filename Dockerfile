@@ -4,7 +4,7 @@ FROM node:24-alpine AS base
 RUN apk add --no-cache libc6-compat
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@11.5.3 --activate
 WORKDIR /app
 
 # Prune the monorepo to the platform + server dependency graph.

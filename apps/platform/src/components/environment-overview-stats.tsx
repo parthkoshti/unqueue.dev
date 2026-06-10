@@ -16,7 +16,6 @@ import {
   type EnvironmentQueueStats,
   type AttentionQueue,
 } from "@/lib/aggregate-queue-stats";
-import { JobStatusChip } from "@/components/job-status-chip";
 import {
   Card,
   CardContent,
@@ -307,8 +306,7 @@ export function EnvironmentAttentionQueues({
               <th className={cn(thClass, "text-right")}>Backlog</th>
               <th className={cn(thClass, "text-right")}>Failed</th>
               <th className={cn(thClass, "text-right")}>% Failed</th>
-              <th className={cn(thClass, "text-right")}>Active</th>
-              <th className={cn(thClass, "pr-4")}>Status</th>
+              <th className={cn(thClass, "text-right pr-4")}>Active</th>
             </tr>
           </thead>
           <tbody>
@@ -367,17 +365,8 @@ export function EnvironmentAttentionQueues({
                 >
                   {formatFailureRate(failureRate)}
                 </td>
-                <td className={cn(tdClass, "text-right font-mono tabular-nums")}>
+                <td className={cn(tdClass, "text-right pr-4 font-mono tabular-nums")}>
                   {formatCount(queue.counts.active)}
-                </td>
-                <td className={cn(tdClass, "pr-4")}>
-                  {queue.isPaused ? (
-                    <JobStatusChip state="paused" />
-                  ) : queue.counts.failed > 0 ? (
-                    <JobStatusChip state="failed" label="failures" />
-                  ) : (
-                    <JobStatusChip state="delayed" label="backlog" />
-                  )}
                 </td>
               </tr>
             );

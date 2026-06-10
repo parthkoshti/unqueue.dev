@@ -30,9 +30,9 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@orpc/client": "^1.6.6",
-    "@orpc/server": "^1.6.6",
-    "@orpc/tanstack-query": "^1.6.6",
+    "@orpc/client": "^1.14.5",
+    "@orpc/server": "^1.14.5",
+    "@orpc/tanstack-query": "^1.14.5",
     "@tanstack/react-query": "^5.81.5",
     "@unqueue/db": "workspace:*",
     "@unqueue/logger": "workspace:*",

@@ -18,7 +18,7 @@
   "dependencies": {
     "@hono/node-server": "^1.14.4",
     "@orpc/experimental-pino": "^1.14.5",
-    "@orpc/server": "^1.6.6",
+    "@orpc/server": "^1.14.5",
     "@unqueue/auth": "workspace:*",
     "@unqueue/bullmq": "workspace:*",
     "@unqueue/db": "workspace:*",

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { JobStatusChip } from "@/components/job-status-chip";
+import { QueueStatusChip } from "@/components/queue-status-chip";
 
 export type EnvironmentQueueRow = {
   name: string;
@@ -96,11 +96,9 @@ export function EnvironmentQueuesTable({
             <CountCell value={queue.counts.failed} emphasis="failed" />
             <CountCell value={queue.counts.completed} />
             <td className={cn(tdClass, "pr-4")}>
-              {queue.isPaused ? (
-                <JobStatusChip state="paused" />
-              ) : (
-                <JobStatusChip state="active" label="running" />
-              )}
+              <QueueStatusChip
+                status={queue.isPaused ? "paused" : "running"}
+              />
             </td>
           </tr>
         ))}
