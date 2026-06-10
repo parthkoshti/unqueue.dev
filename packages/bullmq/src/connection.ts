@@ -1,18 +1,29 @@
-import { createRedisConnection, type RedisConnectionConfig } from "@unstall/redis";
+import {
+  createRedisConnection,
+  type RedisConnectionConfig,
+  type RedisHealthStatus,
+} from "@unstall/redis";
 import type { RedisConnection } from "./redis-types.js";
 import type { RedisInstanceConfig } from "./types.js";
+
+export type HealthChangeCallback = (
+  redisInstanceId: string,
+  status: RedisHealthStatus,
+  error?: string,
+) => void;
 
 export class ConnectionPool {
   private connections = new Map<string, RedisConnection>();
 
+  constructor(private onHealthChange?: HealthChangeCallback) {}
+
   getConnection(config: RedisInstanceConfig): RedisConnection {
     let conn = this.connections.get(config.id);
     if (!conn) {
-      conn = createRedisConnection({
-        host: config.host,
-        port: config.port,
-        password: config.password,
-        tls: config.tls,
+      conn = createRedisConnection(toConnectionConfig(config), {
+        onHealthChange: (status, error) => {
+          this.onHealthChange?.(config.id, status, error);
+        },
       });
       this.connections.set(config.id, conn);
     }
@@ -44,7 +55,10 @@ export function toConnectionConfig(
   return {
     host: instance.host,
     port: instance.port,
+    username: instance.username,
     password: instance.password,
+    db: instance.db,
     tls: instance.tls,
+    tlsServername: instance.tlsServername,
   };
 }

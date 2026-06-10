@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth";
 import { rpcClient, setWorkspaceId } from "@/lib/api";
+import { resolveEnvironmentId } from "@/lib/resolve-environment";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
@@ -15,12 +16,12 @@ export const Route = createFileRoute("/")({
 
     setWorkspaceId(first.id);
     const envs = await rpcClient.environment.list({ workspaceId: first.id });
-    const env = envs[0];
-    if (!env) throw redirect({ to: "/login" });
+    const environmentId = resolveEnvironmentId(first.id, envs);
+    if (!environmentId) throw redirect({ to: "/login" });
 
     throw redirect({
       to: "/$workspaceId/$environmentId",
-      params: { workspaceId: first.id, environmentId: env.id },
+      params: { workspaceId: first.id, environmentId },
     });
   },
 });

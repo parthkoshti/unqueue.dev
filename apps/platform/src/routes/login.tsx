@@ -1,14 +1,15 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { authClient } from "@/lib/auth";
+import { sessionQueryOptions } from "@/lib/session-query";
 import { Button } from "@unstall/ui/components/button";
 import { Input } from "@unstall/ui/components/input";
 import { Label } from "@unstall/ui/components/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@unstall/ui/components/card";
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: async () => {
-    const session = await authClient.getSession();
+  beforeLoad: async ({ context }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
     if (session.data?.user) throw redirect({ to: "/" });
   },
   component: LoginPage,
@@ -29,7 +30,7 @@ function LoginPage() {
   });
 
   return (
-    <div className="flex min-h-full items-center justify-center p-4">
+    <div className="flex min-h-svh items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Sign in to Unstall</CardTitle>
@@ -73,9 +74,9 @@ function LoginPage() {
             </Button>
           </form>
           <p className="mt-4 text-center text-xs text-[var(--color-muted-foreground)]">
-            <a href="/signup" className="hover:underline">
+            <Link to="/signup" className="hover:underline">
               Create an account
-            </a>
+            </Link>
           </p>
         </CardContent>
       </Card>

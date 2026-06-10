@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { rpcClient } from "@/lib/api";
+import { CodeBlock } from "@/components/code-block";
 
 export function JobHoverPreview({
   redisInstanceId,
@@ -38,9 +39,11 @@ export function JobHoverPreview({
         <p className="mb-1 text-[10px] font-medium text-[var(--color-muted-foreground)]">
           Progress
         </p>
-        <pre className="mb-2 max-h-20 overflow-hidden text-[10px]">
-          {JSON.stringify(progressQuery.data ?? {}, null, 2)}
-        </pre>
+        <CodeBlock
+          value={progressQuery.data ?? {}}
+          maxHeight="5rem"
+          className="mb-2"
+        />
         <p className="mb-1 text-[10px] font-medium text-[var(--color-muted-foreground)]">
           Logs (tail)
         </p>

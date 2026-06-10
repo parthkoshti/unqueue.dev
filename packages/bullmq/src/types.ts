@@ -8,6 +8,17 @@ export type JobSummary = {
   attemptsMade: number;
   failedReason?: string;
   delay?: number;
+  priority?: number;
+  stacktrace?: string[];
+  returnValue?: unknown;
+  opts?: {
+    attempts?: number;
+    backoff?: unknown;
+    priority?: number;
+    delay?: number;
+    removeOnComplete?: unknown;
+    removeOnFail?: unknown;
+  };
 };
 
 export type QueueCounts = {
@@ -17,6 +28,9 @@ export type QueueCounts = {
   completed: number;
   failed: number;
   paused: number;
+  prioritized: number;
+  "waiting-children": number;
+  schedulers: number;
 };
 
 export type QueueMeta = {
@@ -27,9 +41,13 @@ export type QueueMeta = {
 
 export type RedisInstanceConfig = {
   id: string;
+  workspaceId: string;
   host: string;
   port: number;
+  username?: string;
   password?: string;
+  db: number;
   tls: boolean;
+  tlsServername?: string;
   bullmqPrefix: string;
 };

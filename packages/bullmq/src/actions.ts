@@ -1,5 +1,39 @@
-import { Queue } from "bullmq";
+import type { Job } from "bullmq";
 import type { RedisConnection } from "./redis-types.js";
+import { withQueue } from "./queue-runner.js";
+
+const BULK_CONCURRENCY = 8;
+
+async function runBulkJobAction(
+  connection: RedisConnection,
+  queueName: string,
+  prefix: string,
+  jobIds: string[],
+  action: (job: Job) => Promise<void>,
+): Promise<{ succeeded: string[]; failed: string[] }> {
+  const succeeded: string[] = [];
+  const failed: string[] = [];
+
+  await withQueue(connection, queueName, prefix, async (queue) => {
+    for (let i = 0; i < jobIds.length; i += BULK_CONCURRENCY) {
+      const chunk = jobIds.slice(i, i + BULK_CONCURRENCY);
+      await Promise.all(
+        chunk.map(async (jobId) => {
+          try {
+            const job = await queue.getJob(jobId);
+            if (!job) throw new Error("Job not found");
+            await action(job);
+            succeeded.push(jobId);
+          } catch {
+            failed.push(jobId);
+          }
+        }),
+      );
+    }
+  });
+
+  return { succeeded, failed };
+}
 
 export async function retryJob(
   connection: RedisConnection,
@@ -7,13 +41,11 @@ export async function retryJob(
   prefix: string,
   jobId: string,
 ): Promise<void> {
-  const queue = new Queue(queueName, {
-    connection: connection as never,
-    prefix,
+  await withQueue(connection, queueName, prefix, async (queue) => {
+    const job = await queue.getJob(jobId);
+    if (!job) throw new Error("Job not found");
+    await job.retry();
   });
-  const job = await queue.getJob(jobId);
-  if (!job) throw new Error("Job not found");
-  await job.retry();
 }
 
 export async function removeJob(
@@ -22,13 +54,11 @@ export async function removeJob(
   prefix: string,
   jobId: string,
 ): Promise<void> {
-  const queue = new Queue(queueName, {
-    connection: connection as never,
-    prefix,
+  await withQueue(connection, queueName, prefix, async (queue) => {
+    const job = await queue.getJob(jobId);
+    if (!job) throw new Error("Job not found");
+    await job.remove();
   });
-  const job = await queue.getJob(jobId);
-  if (!job) throw new Error("Job not found");
-  await job.remove();
 }
 
 export async function promoteJob(
@@ -37,13 +67,11 @@ export async function promoteJob(
   prefix: string,
   jobId: string,
 ): Promise<void> {
-  const queue = new Queue(queueName, {
-    connection: connection as never,
-    prefix,
+  await withQueue(connection, queueName, prefix, async (queue) => {
+    const job = await queue.getJob(jobId);
+    if (!job) throw new Error("Job not found");
+    await job.promote();
   });
-  const job = await queue.getJob(jobId);
-  if (!job) throw new Error("Job not found");
-  await job.promote();
 }
 
 export async function bulkRetry(
@@ -52,19 +80,9 @@ export async function bulkRetry(
   prefix: string,
   jobIds: string[],
 ): Promise<{ succeeded: string[]; failed: string[] }> {
-  const succeeded: string[] = [];
-  const failed: string[] = [];
-
-  for (const jobId of jobIds) {
-    try {
-      await retryJob(connection, queueName, prefix, jobId);
-      succeeded.push(jobId);
-    } catch {
-      failed.push(jobId);
-    }
-  }
-
-  return { succeeded, failed };
+  return runBulkJobAction(connection, queueName, prefix, jobIds, (job) =>
+    job.retry(),
+  );
 }
 
 export async function bulkRemove(
@@ -73,19 +91,9 @@ export async function bulkRemove(
   prefix: string,
   jobIds: string[],
 ): Promise<{ succeeded: string[]; failed: string[] }> {
-  const succeeded: string[] = [];
-  const failed: string[] = [];
-
-  for (const jobId of jobIds) {
-    try {
-      await removeJob(connection, queueName, prefix, jobId);
-      succeeded.push(jobId);
-    } catch {
-      failed.push(jobId);
-    }
-  }
-
-  return { succeeded, failed };
+  return runBulkJobAction(connection, queueName, prefix, jobIds, (job) =>
+    job.remove(),
+  );
 }
 
 export async function pauseQueue(
@@ -93,11 +101,7 @@ export async function pauseQueue(
   queueName: string,
   prefix: string,
 ): Promise<void> {
-  const queue = new Queue(queueName, {
-    connection: connection as never,
-    prefix,
-  });
-  await queue.pause();
+  await withQueue(connection, queueName, prefix, (queue) => queue.pause());
 }
 
 export async function resumeQueue(
@@ -105,11 +109,7 @@ export async function resumeQueue(
   queueName: string,
   prefix: string,
 ): Promise<void> {
-  const queue = new Queue(queueName, {
-    connection: connection as never,
-    prefix,
-  });
-  await queue.resume();
+  await withQueue(connection, queueName, prefix, (queue) => queue.resume());
 }
 
 export async function drainQueue(
@@ -118,11 +118,9 @@ export async function drainQueue(
   prefix: string,
   delayed = false,
 ): Promise<void> {
-  const queue = new Queue(queueName, {
-    connection: connection as never,
-    prefix,
-  });
-  await queue.drain(delayed);
+  await withQueue(connection, queueName, prefix, (queue) =>
+    queue.drain(delayed),
+  );
 }
 
 export async function cleanQueue(
@@ -133,11 +131,9 @@ export async function cleanQueue(
   limit: number,
   type: "completed" | "failed" | "delayed" | "wait" | "paused",
 ): Promise<string[]> {
-  const queue = new Queue(queueName, {
-    connection: connection as never,
-    prefix,
-  });
-  return queue.clean(grace, limit, type);
+  return withQueue(connection, queueName, prefix, (queue) =>
+    queue.clean(grace, limit, type),
+  );
 }
 
 export async function obliterateQueue(
@@ -145,9 +141,7 @@ export async function obliterateQueue(
   queueName: string,
   prefix: string,
 ): Promise<void> {
-  const queue = new Queue(queueName, {
-    connection: connection as never,
-    prefix,
-  });
-  await queue.obliterate({ force: true });
+  await withQueue(connection, queueName, prefix, (queue) =>
+    queue.obliterate({ force: true }),
+  );
 }

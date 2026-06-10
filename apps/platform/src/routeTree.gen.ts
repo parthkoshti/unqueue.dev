@@ -14,11 +14,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as WorkspaceIdRouteImport } from './routes/$workspaceId'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InviteTokenRouteImport } from './routes/invite/$token'
+import { Route as WorkspaceIdConnectionsRouteImport } from './routes/$workspaceId/connections'
 import { Route as WorkspaceIdBookmarksRouteImport } from './routes/$workspaceId/bookmarks'
 import { Route as WorkspaceIdEnvironmentIdRouteImport } from './routes/$workspaceId/$environmentId'
 import { Route as WorkspaceIdEnvironmentIdIndexRouteImport } from './routes/$workspaceId/$environmentId/index'
-import { Route as WorkspaceIdSettingsRedisRouteImport } from './routes/$workspaceId/settings/redis'
 import { Route as WorkspaceIdSettingsMembersRouteImport } from './routes/$workspaceId/settings/members'
+import { Route as WorkspaceIdSettingsEnvironmentsRouteImport } from './routes/$workspaceId/settings/environments'
 import { Route as WorkspaceIdSettingsAlertsRouteImport } from './routes/$workspaceId/settings/alerts'
 import { Route as WorkspaceIdEnvironmentIdQueuesQueueNameRouteImport } from './routes/$workspaceId/$environmentId/queues/$queueName'
 
@@ -47,6 +48,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceIdConnectionsRoute = WorkspaceIdConnectionsRouteImport.update({
+  id: '/connections',
+  path: '/connections',
+  getParentRoute: () => WorkspaceIdRoute,
+} as any)
 const WorkspaceIdBookmarksRoute = WorkspaceIdBookmarksRouteImport.update({
   id: '/bookmarks',
   path: '/bookmarks',
@@ -64,16 +70,16 @@ const WorkspaceIdEnvironmentIdIndexRoute =
     path: '/',
     getParentRoute: () => WorkspaceIdEnvironmentIdRoute,
   } as any)
-const WorkspaceIdSettingsRedisRoute =
-  WorkspaceIdSettingsRedisRouteImport.update({
-    id: '/settings/redis',
-    path: '/settings/redis',
-    getParentRoute: () => WorkspaceIdRoute,
-  } as any)
 const WorkspaceIdSettingsMembersRoute =
   WorkspaceIdSettingsMembersRouteImport.update({
     id: '/settings/members',
     path: '/settings/members',
+    getParentRoute: () => WorkspaceIdRoute,
+  } as any)
+const WorkspaceIdSettingsEnvironmentsRoute =
+  WorkspaceIdSettingsEnvironmentsRouteImport.update({
+    id: '/settings/environments',
+    path: '/settings/environments',
     getParentRoute: () => WorkspaceIdRoute,
   } as any)
 const WorkspaceIdSettingsAlertsRoute =
@@ -96,10 +102,11 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/$workspaceId/$environmentId': typeof WorkspaceIdEnvironmentIdRouteWithChildren
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
+  '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/$workspaceId/settings/alerts': typeof WorkspaceIdSettingsAlertsRoute
+  '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
-  '/$workspaceId/settings/redis': typeof WorkspaceIdSettingsRedisRoute
   '/$workspaceId/$environmentId/': typeof WorkspaceIdEnvironmentIdIndexRoute
   '/$workspaceId/$environmentId/queues/$queueName': typeof WorkspaceIdEnvironmentIdQueuesQueueNameRoute
 }
@@ -109,10 +116,11 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
+  '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/$workspaceId/settings/alerts': typeof WorkspaceIdSettingsAlertsRoute
+  '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
-  '/$workspaceId/settings/redis': typeof WorkspaceIdSettingsRedisRoute
   '/$workspaceId/$environmentId': typeof WorkspaceIdEnvironmentIdIndexRoute
   '/$workspaceId/$environmentId/queues/$queueName': typeof WorkspaceIdEnvironmentIdQueuesQueueNameRoute
 }
@@ -124,10 +132,11 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/$workspaceId/$environmentId': typeof WorkspaceIdEnvironmentIdRouteWithChildren
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
+  '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/$workspaceId/settings/alerts': typeof WorkspaceIdSettingsAlertsRoute
+  '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
-  '/$workspaceId/settings/redis': typeof WorkspaceIdSettingsRedisRoute
   '/$workspaceId/$environmentId/': typeof WorkspaceIdEnvironmentIdIndexRoute
   '/$workspaceId/$environmentId/queues/$queueName': typeof WorkspaceIdEnvironmentIdQueuesQueueNameRoute
 }
@@ -140,10 +149,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/$workspaceId/$environmentId'
     | '/$workspaceId/bookmarks'
+    | '/$workspaceId/connections'
     | '/invite/$token'
     | '/$workspaceId/settings/alerts'
+    | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
-    | '/$workspaceId/settings/redis'
     | '/$workspaceId/$environmentId/'
     | '/$workspaceId/$environmentId/queues/$queueName'
   fileRoutesByTo: FileRoutesByTo
@@ -153,10 +163,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/$workspaceId/bookmarks'
+    | '/$workspaceId/connections'
     | '/invite/$token'
     | '/$workspaceId/settings/alerts'
+    | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
-    | '/$workspaceId/settings/redis'
     | '/$workspaceId/$environmentId'
     | '/$workspaceId/$environmentId/queues/$queueName'
   id:
@@ -167,10 +178,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/$workspaceId/$environmentId'
     | '/$workspaceId/bookmarks'
+    | '/$workspaceId/connections'
     | '/invite/$token'
     | '/$workspaceId/settings/alerts'
+    | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
-    | '/$workspaceId/settings/redis'
     | '/$workspaceId/$environmentId/'
     | '/$workspaceId/$environmentId/queues/$queueName'
   fileRoutesById: FileRoutesById
@@ -220,6 +232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$workspaceId/connections': {
+      id: '/$workspaceId/connections'
+      path: '/connections'
+      fullPath: '/$workspaceId/connections'
+      preLoaderRoute: typeof WorkspaceIdConnectionsRouteImport
+      parentRoute: typeof WorkspaceIdRoute
+    }
     '/$workspaceId/bookmarks': {
       id: '/$workspaceId/bookmarks'
       path: '/bookmarks'
@@ -241,18 +260,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceIdEnvironmentIdIndexRouteImport
       parentRoute: typeof WorkspaceIdEnvironmentIdRoute
     }
-    '/$workspaceId/settings/redis': {
-      id: '/$workspaceId/settings/redis'
-      path: '/settings/redis'
-      fullPath: '/$workspaceId/settings/redis'
-      preLoaderRoute: typeof WorkspaceIdSettingsRedisRouteImport
-      parentRoute: typeof WorkspaceIdRoute
-    }
     '/$workspaceId/settings/members': {
       id: '/$workspaceId/settings/members'
       path: '/settings/members'
       fullPath: '/$workspaceId/settings/members'
       preLoaderRoute: typeof WorkspaceIdSettingsMembersRouteImport
+      parentRoute: typeof WorkspaceIdRoute
+    }
+    '/$workspaceId/settings/environments': {
+      id: '/$workspaceId/settings/environments'
+      path: '/settings/environments'
+      fullPath: '/$workspaceId/settings/environments'
+      preLoaderRoute: typeof WorkspaceIdSettingsEnvironmentsRouteImport
       parentRoute: typeof WorkspaceIdRoute
     }
     '/$workspaceId/settings/alerts': {
@@ -292,17 +311,19 @@ const WorkspaceIdEnvironmentIdRouteWithChildren =
 interface WorkspaceIdRouteChildren {
   WorkspaceIdEnvironmentIdRoute: typeof WorkspaceIdEnvironmentIdRouteWithChildren
   WorkspaceIdBookmarksRoute: typeof WorkspaceIdBookmarksRoute
+  WorkspaceIdConnectionsRoute: typeof WorkspaceIdConnectionsRoute
   WorkspaceIdSettingsAlertsRoute: typeof WorkspaceIdSettingsAlertsRoute
+  WorkspaceIdSettingsEnvironmentsRoute: typeof WorkspaceIdSettingsEnvironmentsRoute
   WorkspaceIdSettingsMembersRoute: typeof WorkspaceIdSettingsMembersRoute
-  WorkspaceIdSettingsRedisRoute: typeof WorkspaceIdSettingsRedisRoute
 }
 
 const WorkspaceIdRouteChildren: WorkspaceIdRouteChildren = {
   WorkspaceIdEnvironmentIdRoute: WorkspaceIdEnvironmentIdRouteWithChildren,
   WorkspaceIdBookmarksRoute: WorkspaceIdBookmarksRoute,
+  WorkspaceIdConnectionsRoute: WorkspaceIdConnectionsRoute,
   WorkspaceIdSettingsAlertsRoute: WorkspaceIdSettingsAlertsRoute,
+  WorkspaceIdSettingsEnvironmentsRoute: WorkspaceIdSettingsEnvironmentsRoute,
   WorkspaceIdSettingsMembersRoute: WorkspaceIdSettingsMembersRoute,
-  WorkspaceIdSettingsRedisRoute: WorkspaceIdSettingsRedisRoute,
 }
 
 const WorkspaceIdRouteWithChildren = WorkspaceIdRoute._addFileChildren(

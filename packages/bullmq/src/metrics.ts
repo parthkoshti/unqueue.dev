@@ -4,9 +4,17 @@ const WINDOWS = {
   "15m": 900_000,
   "1h": 3_600_000,
   "24h": 86_400_000,
+  "7d": 7 * 86_400_000,
 } as const;
 
+// Maximum in-memory completion events per queue. At 100 jobs/sec this is ~10
+// minutes of history. Prune fires whenever the array exceeds this limit so
+// a busy queue can never grow the array beyond 2× this cap.
+const MAX_COMPLETIONS_PER_QUEUE = 60_000;
+
 export type WindowKey = keyof typeof WINDOWS;
+
+import type { QueueCounts } from "./types.js";
 
 export type QueueMetrics = {
   throughputPerMinute: number;
@@ -17,6 +25,9 @@ export type QueueMetrics = {
   failed: number;
   successRate: number;
   failureRate: number;
+  completedInWindow: number;
+  failedInWindow: number;
+  totalInWindow: number;
   p95RuntimeMs: number;
   p99RuntimeMs: number;
   queueLagMs: number;
@@ -35,13 +46,7 @@ type MetricsState = {
   completed: number;
   stalledCount: number;
   oldestWaitingTimestamp?: number;
-  liveCounts: {
-    active: number;
-    waiting: number;
-    delayed: number;
-    completed: number;
-    failed: number;
-  };
+  liveCounts: QueueCounts;
 };
 
 export class MetricsAggregator {
@@ -61,11 +66,15 @@ export class MetricsAggregator {
         completed: 0,
         stalledCount: 0,
         liveCounts: {
-          active: 0,
           waiting: 0,
+          active: 0,
           delayed: 0,
           completed: 0,
           failed: 0,
+          paused: 0,
+          prioritized: 0,
+          "waiting-children": 0,
+          schedulers: 0,
         },
       };
       this.states.set(k, state);
@@ -93,7 +102,14 @@ export class MetricsAggregator {
     state.completions.push({ timestamp: now, runtimeMs, success });
     if (success) state.completed++;
     else state.failed++;
-    this.prune(state, now);
+
+    if (state.completions.length > MAX_COMPLETIONS_PER_QUEUE) {
+      this.prune(state, now);
+      // If still over cap after TTL prune (very high throughput), hard-trim oldest.
+      if (state.completions.length > MAX_COMPLETIONS_PER_QUEUE) {
+        state.completions = state.completions.slice(-MAX_COMPLETIONS_PER_QUEUE);
+      }
+    }
   }
 
   recordStalled(redisId: string, queueName: string): void {
@@ -140,6 +156,9 @@ export class MetricsAggregator {
       failed: state.liveCounts.failed,
       successRate: total > 0 ? completedInWindow / total : 1,
       failureRate: total > 0 ? failedInWindow / total : 0,
+      completedInWindow,
+      failedInWindow,
+      totalInWindow: total,
       p95RuntimeMs: percentile(runtimes, 0.95),
       p99RuntimeMs: percentile(runtimes, 0.99),
       queueLagMs,
@@ -148,7 +167,7 @@ export class MetricsAggregator {
   }
 
   private prune(state: MetricsState, now: number): void {
-    const maxWindow = WINDOWS["24h"];
+    const maxWindow = WINDOWS["7d"];
     state.completions = state.completions.filter(
       (c) => c.timestamp >= now - maxWindow,
     );

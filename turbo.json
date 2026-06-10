@@ -1,12 +1,34 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "concurrency": "15",
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "REDIS_URL",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "PLATFORM_URL",
+    "API_URL",
+    "COOKIE_DOMAIN",
+    "ENCRYPTION_KEYS",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_USER",
+    "SMTP_PASS",
+    "SMTP_FROM",
+    "PORT",
+    "NODE_ENV",
+    "VITE_API_URL",
+    "BULLMQ_REDIS_URL",
+    "LOG_LEVEL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "env": ["VITE_API_URL"]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },

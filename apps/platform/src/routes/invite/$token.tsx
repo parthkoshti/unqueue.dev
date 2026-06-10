@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { authClient } from "@/lib/auth";
 import { rpcClient } from "@/lib/api";
+import { resolveEnvironmentId } from "@/lib/resolve-environment";
 
 export const Route = createFileRoute("/invite/$token")({
   component: InvitePage,
@@ -22,7 +23,7 @@ function InvitePage() {
       const envs = await rpcClient.environment.list({
         workspaceId: result.workspaceId,
       });
-      const environmentId = envs[0]?.id;
+      const environmentId = resolveEnvironmentId(result.workspaceId, envs);
       if (!environmentId) return;
 
       navigate({

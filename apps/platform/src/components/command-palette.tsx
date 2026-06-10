@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -9,31 +9,23 @@ import {
   CommandItem,
   CommandList,
 } from "@unstall/ui/components/command";
-import { rpcClient } from "@/lib/api";
+import { environmentQueuesQueryOptions } from "@/lib/environment-queues-query";
 
 export function CommandPalette({
   workspaceId,
   environmentId,
+  open,
+  onOpenChange,
 }: {
   workspaceId: string;
   environmentId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
   const queuesQuery = useQuery({
-    queryKey: ["redis-queues", environmentId],
-    queryFn: async () => {
-      const redisList = await rpcClient.redis.list({ environmentId });
-      const allQueues = await Promise.all(
-        redisList.map((r) =>
-          rpcClient.queue.list({ redisInstanceId: r.id }).then((queues) =>
-            queues.map((q) => ({ ...q, redisInstanceId: r.id })),
-          ),
-        ),
-      );
-      return allQueues.flat();
-    },
+    ...environmentQueuesQueryOptions(environmentId),
     enabled: open,
   });
 
@@ -41,71 +33,123 @@ export function CommandPalette({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((o) => !o);
+        onOpenChange(!open);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [open, onOpenChange]);
+
+  const go = (fn: () => void) => {
+    fn();
+    onOpenChange(false);
+  };
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Navigate to queue..." />
+    <CommandDialog open={open} onOpenChange={onOpenChange}>
+      <CommandInput placeholder="Search queues, pages, settings..." />
       <CommandList>
         <CommandEmpty>No results.</CommandEmpty>
-        <CommandGroup heading="Navigation">
+        <CommandGroup heading="Platform">
           <CommandItem
-            onSelect={() => {
-              navigate({
-                to: "/$workspaceId/$environmentId",
-                params: { workspaceId, environmentId },
-              });
-              setOpen(false);
-            }}
+            onSelect={() =>
+              go(() =>
+                navigate({
+                  to: "/$workspaceId/$environmentId",
+                  params: { workspaceId, environmentId },
+                }),
+              )
+            }
           >
-            Environment overview
+            Overview
           </CommandItem>
           <CommandItem
-            onSelect={() => {
-              navigate({
-                to: "/$workspaceId/bookmarks",
-                params: { workspaceId },
-              });
-              setOpen(false);
-            }}
+            onSelect={() =>
+              go(() =>
+                navigate({
+                  to: "/$workspaceId/bookmarks",
+                  params: { workspaceId },
+                }),
+              )
+            }
           >
             Bookmarks
           </CommandItem>
           <CommandItem
-            onSelect={() => {
-              navigate({
-                to: "/$workspaceId/settings/members",
-                params: { workspaceId },
-              });
-              setOpen(false);
-            }}
+            onSelect={() =>
+              go(() =>
+                navigate({
+                  to: "/$workspaceId/connections",
+                  params: { workspaceId },
+                }),
+              )
+            }
           >
-            Settings
+            Connections
+          </CommandItem>
+          <CommandItem
+            onSelect={() =>
+              go(() =>
+                navigate({
+                  to: "/$workspaceId/settings/alerts",
+                  params: { workspaceId },
+                }),
+              )
+            }
+          >
+            Alerts
+          </CommandItem>
+        </CommandGroup>
+        <CommandGroup heading="Workspace">
+          <CommandItem
+            onSelect={() =>
+              go(() =>
+                navigate({
+                  to: "/$workspaceId/settings/environments",
+                  params: { workspaceId },
+                }),
+              )
+            }
+          >
+            Environments
+          </CommandItem>
+          <CommandItem
+            onSelect={() =>
+              go(() =>
+                navigate({
+                  to: "/$workspaceId/settings/members",
+                  params: { workspaceId },
+                }),
+              )
+            }
+          >
+            Members
           </CommandItem>
         </CommandGroup>
         <CommandGroup heading="Queues">
           {(queuesQuery.data ?? []).map((queue) => (
             <CommandItem
               key={`${queue.redisInstanceId}-${queue.name}`}
-              onSelect={() => {
-                navigate({
-                  to: "/$workspaceId/$environmentId/queues/$queueName",
-                  params: {
-                    workspaceId,
-                    environmentId,
-                    queueName: queue.name,
-                  },
-                  search: { redisInstanceId: queue.redisInstanceId },
-                });
-                setOpen(false);
-              }}
+              onSelect={() =>
+                go(() =>
+                  navigate({
+                    to: "/$workspaceId/$environmentId/queues/$queueName",
+                    params: {
+                      workspaceId,
+                      environmentId,
+                      queueName: queue.name,
+                    },
+                    search: { redisInstanceId: queue.redisInstanceId },
+                  }),
+                )
+              }
             >
               {queue.name}
+              {queue.counts.failed > 0 && (
+                <span className="ml-auto text-xs text-destructive">
+                  {queue.counts.failed} failed
+                </span>
+              )}
             </CommandItem>
           ))}
         </CommandGroup>

@@ -3,20 +3,73 @@ import { Redis, type Redis as RedisType } from "ioredis";
 export type RedisConnectionConfig = {
   host: string;
   port: number;
+  username?: string;
   password?: string;
+  db?: number;
   tls?: boolean;
+  tlsServername?: string;
 };
 
-export function createRedisConnection(config: RedisConnectionConfig): RedisType {
-  return new Redis({
+export type RedisHealthStatus = "connected" | "error" | "disconnected";
+
+export function createRedisConnection(
+  config: RedisConnectionConfig,
+  options?: {
+    onHealthChange?: (status: RedisHealthStatus, error?: string) => void;
+  },
+): RedisType {
+  const redis = new Redis({
     host: config.host,
     port: config.port,
+    username: config.username,
     password: config.password,
-    tls: config.tls ? {} : undefined,
+    db: config.db ?? 0,
+    tls: config.tls
+      ? { servername: config.tlsServername ?? config.host }
+      : undefined,
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    connectTimeout: 10_000,
+    commandTimeout: 30_000,
+    keepAlive: 30_000,
   });
+
+  if (options?.onHealthChange) {
+    attachHealthListeners(redis, options.onHealthChange);
+  }
+
+  return redis;
 }
+
+function attachHealthListeners(
+  redis: RedisType,
+  onHealthChange: (status: RedisHealthStatus, error?: string) => void,
+): void {
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let pending: { status: RedisHealthStatus; error?: string } | undefined;
+
+  const emit = (status: RedisHealthStatus, error?: string) => {
+    pending = { status, error };
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      if (pending) onHealthChange(pending.status, pending.error);
+      pending = undefined;
+    }, 2_000);
+  };
+
+  redis.on("ready", () => emit("connected"));
+  redis.on("error", (err: Error) => emit("error", err.message));
+  redis.on("close", () => emit("disconnected"));
+  redis.on("end", () => emit("disconnected"));
+}
+
+export {
+  createDiscoveryCache,
+  createInMemoryDiscoveryCache,
+  createRedisDiscoveryCache,
+  DISCOVERY_CACHE_TTL_SEC,
+  type DiscoveryCache,
+} from "./cache.js";
 
 export async function testRedisConnection(
   config: RedisConnectionConfig,

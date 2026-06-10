@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "vitest run"
   },
   "dependencies": {
     "ioredis": "^5.6.1"
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@unstall/config": "workspace:*",
     "@types/node": "^24.0.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

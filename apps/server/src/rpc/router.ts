@@ -1,85 +1,35 @@
 import { os } from "@orpc/server";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
-import { createId, ROLES } from "@unstall/shared";
+import { ROLES } from "@unstall/shared";
 import {
   alertConditionSchema,
   redisInstanceInputSchema,
 } from "@unstall/validators";
-import {
-  listJobs,
-  getJobState,
-  getJobPayload,
-  getJobProgress,
-  getJobLogs,
-  retryJob,
-  removeJob,
-  promoteJob,
-  bulkRetry,
-  bulkRemove,
-  pauseQueue,
-  resumeQueue,
-  drainQueue,
-  cleanQueue,
-  obliterateQueue,
-  type JobState,
-} from "@unstall/bullmq";
-import { testRedisConnection } from "@unstall/redis";
-import {
-  alerts,
-  alertEvents,
-  bookmarkFolders,
-  bookmarks,
-  environments,
-  redisInstances,
-  workspaceInvites,
-  workspaceMembers,
-  workspaces,
-  users,
-} from "@unstall/db/schema";
-import { authed, requireRole } from "./middleware.js";
-import { ORPCError } from "@orpc/server";
+import type { Actor } from "@unstall/services";
+import { authed, requireRole, rpcLogging, serviceErrors } from "./middleware.js";
 import type { ServerContext } from "./context.js";
 
-function notFound(resource = "Resource"): never {
-  throw new ORPCError("NOT_FOUND", { message: `${resource} not found` });
-}
+const base = os.$context<ServerContext>().use(rpcLogging).use(serviceErrors);
 
-function forbidden(): never {
-  throw new ORPCError("FORBIDDEN", { message: "Forbidden" });
+function toActor(context: ServerContext): Actor {
+  return {
+    userId: context.user!.id,
+    email: context.user!.email,
+    name: context.user!.name,
+    membership: context.membership,
+  };
 }
-import { encryptSecret } from "../encryption-service.js";
-import type { EncryptedEnvelope } from "@unstall/shared";
-import { createHash, randomBytes } from "node:crypto";
-
-const base = os.$context<ServerContext>();
 
 const workspaceRouter = {
   list: base.use(authed).handler(async ({ context }) => {
-    const { db, user } = context;
-    return db
-      .select({
-        id: workspaces.id,
-        name: workspaces.name,
-        role: workspaceMembers.role,
-        createdAt: workspaces.createdAt,
-      })
-      .from(workspaceMembers)
-      .innerJoin(workspaces, eq(workspaces.id, workspaceMembers.workspaceId))
-      .where(eq(workspaceMembers.userId, user!.id));
+    return context.services.workspace.list(toActor(context));
   }),
 
   get: base
     .input(z.object({ workspaceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      const [workspace] = await context.db
-        .select()
-        .from(workspaces)
-        .where(eq(workspaces.id, input.workspaceId))
-        .limit(1);
-      if (!workspace) notFound("Workspace");
-      return workspace;
+      return context.services.workspace.get(toActor(context), input.workspaceId);
     }),
 };
 
@@ -88,18 +38,15 @@ const membersRouter = {
     .input(z.object({ workspaceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.db
-        .select({
-          id: workspaceMembers.id,
-          userId: users.id,
-          name: users.name,
-          email: users.email,
-          role: workspaceMembers.role,
-          createdAt: workspaceMembers.createdAt,
-        })
-        .from(workspaceMembers)
-        .innerJoin(users, eq(users.id, workspaceMembers.userId))
-        .where(eq(workspaceMembers.workspaceId, input.workspaceId));
+      return context.services.members.list(input.workspaceId);
+    }),
+
+  listInvites: base
+    .input(z.object({ workspaceId: z.string().length(24) }))
+    .use(authed)
+    .use(requireRole("admin"))
+    .handler(async ({ context, input }) => {
+      return context.services.members.listInvites(input.workspaceId);
     }),
 
   invite: base
@@ -113,20 +60,60 @@ const membersRouter = {
     .use(authed)
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const token = randomBytes(32).toString("hex");
-      const tokenHash = createHash("sha256").update(token).digest("hex");
-      const id = createId();
-      await context.db.insert(workspaceInvites).values({
-        id,
-        workspaceId: input.workspaceId,
-        email: input.email,
-        role: input.role,
-        tokenHash,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      return context.services.members.invite({
+        ...input,
         invitedBy: context.user!.id,
       });
-      const platformURL = process.env.PLATFORM_URL ?? "http://localhost:5173";
-      return { inviteUrl: `${platformURL}/invite/${token}`, id };
+    }),
+
+  updateRole: base
+    .input(
+      z.object({
+        memberId: z.string().length(24),
+        role: z.enum(ROLES).refine((r) => r !== "owner", "Cannot assign owner role"),
+      }),
+    )
+    .use(authed)
+    .use(requireRole("admin"))
+    .handler(async ({ context, input }) => {
+      return context.services.members.updateRole(
+        toActor(context),
+        input.memberId,
+        input.role,
+      );
+    }),
+
+  remove: base
+    .input(z.object({ memberId: z.string().length(24) }))
+    .use(authed)
+    .use(requireRole("admin"))
+    .handler(async ({ context, input }) => {
+      return context.services.members.remove(toActor(context), input.memberId);
+    }),
+
+  updateInvite: base
+    .input(
+      z.object({
+        inviteId: z.string().length(24),
+        role: z.enum(ROLES).refine((r) => r !== "owner", "Cannot assign owner role"),
+      }),
+    )
+    .use(authed)
+    .use(requireRole("admin"))
+    .handler(async ({ context, input }) => {
+      return context.services.members.updateInvite(
+        toActor(context),
+        input.inviteId,
+        input.role,
+      );
+    }),
+
+  revokeInvite: base
+    .input(z.object({ inviteId: z.string().length(24) }))
+    .use(authed)
+    .use(requireRole("admin"))
+    .handler(async ({ context, input }) => {
+      return context.services.members.revokeInvite(toActor(context), input.inviteId);
     }),
 };
 
@@ -135,10 +122,7 @@ const environmentRouter = {
     .input(z.object({ workspaceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.db
-        .select()
-        .from(environments)
-        .where(eq(environments.workspaceId, input.workspaceId));
+      return context.services.environment.list(input.workspaceId);
     }),
 
   create: base
@@ -146,13 +130,7 @@ const environmentRouter = {
     .use(authed)
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const id = createId();
-      await context.db.insert(environments).values({
-        id,
-        workspaceId: input.workspaceId,
-        name: input.name,
-      });
-      return { id };
+      return context.services.environment.create(input);
     }),
 };
 
@@ -161,26 +139,7 @@ const redisRouter = {
     .input(z.object({ environmentId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      const rows = await context.db
-        .select({
-          id: redisInstances.id,
-          nickname: redisInstances.nickname,
-          port: redisInstances.port,
-          tls: redisInstances.tls,
-          bullmqPrefix: redisInstances.bullmqPrefix,
-          status: redisInstances.status,
-          lastConnectedAt: redisInstances.lastConnectedAt,
-          lastError: redisInstances.lastError,
-          host: redisInstances.host,
-        })
-        .from(redisInstances)
-        .where(eq(redisInstances.environmentId, input.environmentId));
-
-      const role = context.membership?.role;
-      if (role !== "owner" && role !== "admin") {
-        return rows.map(({ host, ...rest }) => ({ ...rest, host: undefined }));
-      }
-      return rows;
+      return context.services.redis.list(toActor(context), input.environmentId);
     }),
 
   create: base
@@ -191,88 +150,98 @@ const redisRouter = {
       }),
     )
     .use(authed)
-    .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const id = createId();
-      const encryptedCredentials = encryptSecret(input.password ?? "");
-
-      await context.db.insert(redisInstances).values({
-        id,
-        environmentId: input.environmentId,
-        nickname: input.nickname,
-        host: input.host,
-        port: input.port,
-        tls: input.tls,
-        encryptedCredentials,
-        bullmqPrefix: input.bullmqPrefix,
-        status: "disconnected",
-      });
-
-      await context.realtime.registerInstance({
-        id,
-        host: input.host,
-        port: input.port,
-        password: input.password,
-        tls: input.tls,
-        bullmqPrefix: input.bullmqPrefix,
-      });
-
-      await context.db
-        .update(redisInstances)
-        .set({ status: "connected", lastConnectedAt: new Date(), lastError: null })
-        .where(eq(redisInstances.id, id));
-
-      return { id };
+      return context.services.redis.create(toActor(context), input);
     }),
 
   testConnection: base
-    .input(redisInstanceInputSchema)
+    .input(
+      redisInstanceInputSchema.extend({
+        id: z.string().length(24).optional(),
+        environmentId: z.string().length(24).optional(),
+      }),
+    )
     .use(authed)
-    .use(requireRole("admin"))
-    .handler(async ({ input }) => {
-      return testRedisConnection({
-        host: input.host,
-        port: input.port,
-        password: input.password,
-        tls: input.tls,
-      });
+    .handler(async ({ context, input }) => {
+      return context.services.redis.testConnection(toActor(context), input);
+    }),
+
+  update: base
+    .input(
+      z.object({
+        id: z.string().length(24),
+        ...redisInstanceInputSchema.shape,
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.redis.update(toActor(context), input);
     }),
 
   delete: base
     .input(z.object({ id: z.string().length(24) }))
     .use(authed)
-    .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      await context.realtime.unregisterInstance(input.id);
-      await context.db.delete(redisInstances).where(eq(redisInstances.id, input.id));
-      return { ok: true as const };
+      return context.services.redis.delete(toActor(context), input.id);
     }),
 };
+
+const metricsWindowSchema = z.enum(["1m", "5m", "15m", "1h", "24h", "7d"]);
 
 const queueRouter = {
   list: base
     .input(z.object({ redisInstanceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      const queues = context.realtime.getQueues(input.redisInstanceId);
-      const metas = await Promise.all(
-        queues.map(async (name) => {
-          try {
-            return await context.realtime.getQueueMeta(input.redisInstanceId, name);
-          } catch {
-            return null;
-          }
-        }),
-      );
-      return metas.filter(Boolean);
+      return context.services.queue.list(toActor(context), input.redisInstanceId);
+    }),
+
+  listForEnvironment: base
+    .input(
+      z.object({
+        environmentId: z.string().length(24),
+        forceRefresh: z.boolean().optional(),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.queue.listForEnvironment(toActor(context), input);
+    }),
+
+  getMeta: base
+    .input(
+      z.object({
+        redisInstanceId: z.string().length(24),
+        queueName: z.string(),
+        forceRefresh: z.boolean().optional(),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.queue.getMeta(toActor(context), input);
+    }),
+
+  getMetrics: base
+    .input(
+      z.object({
+        redisInstanceId: z.string().length(24),
+        queueName: z.string(),
+        window: metricsWindowSchema.default("1h"),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.queue.getMetrics(toActor(context), input);
     }),
 
   refreshDiscovery: base
     .input(z.object({ redisInstanceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      const queues = await context.realtime.refreshDiscovery(input.redisInstanceId);
-      return { queues };
+      return context.services.queue.refreshDiscovery(
+        toActor(context),
+        input.redisInstanceId,
+      );
     }),
 };
 
@@ -283,12 +252,16 @@ const jobRouter = {
         redisInstanceId: z.string().length(24),
         queueName: z.string(),
         state: z.enum([
+          "all",
           "waiting",
           "active",
           "delayed",
           "completed",
           "failed",
           "paused",
+          "prioritized",
+          "waiting-children",
+          "schedulers",
         ]),
         start: z.number().int().min(0).default(0),
         end: z.number().int().min(0).default(49),
@@ -296,17 +269,7 @@ const jobRouter = {
     )
     .use(authed)
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      return listJobs(
-        connection,
-        input.queueName,
-        prefix,
-        input.state as JobState,
-        input.start,
-        input.end,
-      );
+      return context.services.job.list(toActor(context), input);
     }),
 
   get: base
@@ -319,17 +282,7 @@ const jobRouter = {
     )
     .use(authed)
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      const job = await getJobState(
-        connection,
-        input.queueName,
-        prefix,
-        input.jobId,
-      );
-      if (!job) notFound("Job");
-      return job;
+      return context.services.job.get(toActor(context), input);
     }),
 
   getPayload: base
@@ -342,15 +295,7 @@ const jobRouter = {
     )
     .use(authed)
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      return getJobPayload(
-        connection,
-        input.queueName,
-        prefix,
-        input.jobId,
-      );
+      return context.services.job.getPayload(toActor(context), input);
     }),
 
   getProgress: base
@@ -363,15 +308,7 @@ const jobRouter = {
     )
     .use(authed)
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      return getJobProgress(
-        connection,
-        input.queueName,
-        prefix,
-        input.jobId,
-      );
+      return context.services.job.getProgress(toActor(context), input);
     }),
 
   getLogs: base
@@ -384,15 +321,7 @@ const jobRouter = {
     )
     .use(authed)
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      return getJobLogs(
-        connection,
-        input.queueName,
-        prefix,
-        input.jobId,
-      );
+      return context.services.job.getLogs(toActor(context), input);
     }),
 };
 
@@ -417,69 +346,36 @@ const jobActionsRouter = {
   retry: base
     .input(jobActionInput)
     .use(authed)
-    .use(requireRole("member"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      await retryJob(connection, input.queueName, prefix, input.jobId);
-      return { ok: true as const };
+      return context.services.jobActions.retry(toActor(context), input);
     }),
 
   remove: base
     .input(jobActionInput)
     .use(authed)
-    .use(requireRole("member"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      await removeJob(connection, input.queueName, prefix, input.jobId);
-      return { ok: true as const };
+      return context.services.jobActions.remove(toActor(context), input);
     }),
 
   promote: base
     .input(jobActionInput)
     .use(authed)
-    .use(requireRole("member"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      await promoteJob(connection, input.queueName, prefix, input.jobId);
-      return { ok: true as const };
+      return context.services.jobActions.promote(toActor(context), input);
     }),
 
   bulkRetry: base
     .input(bulkJobActionInput)
     .use(authed)
-    .use(requireRole("member"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      return bulkRetry(
-        connection,
-        input.queueName,
-        prefix,
-        input.jobIds,
-      );
+      return context.services.jobActions.bulkRetry(toActor(context), input);
     }),
 
   bulkRemove: base
     .input(bulkJobActionInput)
     .use(authed)
-    .use(requireRole("member"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      return bulkRemove(
-        connection,
-        input.queueName,
-        prefix,
-        input.jobIds,
-      );
+      return context.services.jobActions.bulkRemove(toActor(context), input);
     }),
 };
 
@@ -487,37 +383,22 @@ const queueAdminRouter = {
   pause: base
     .input(queueActionInput)
     .use(authed)
-    .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      await pauseQueue(connection, input.queueName, prefix);
-      return { ok: true as const };
+      return context.services.queueAdmin.pause(toActor(context), input);
     }),
 
   resume: base
     .input(queueActionInput)
     .use(authed)
-    .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      await resumeQueue(connection, input.queueName, prefix);
-      return { ok: true as const };
+      return context.services.queueAdmin.resume(toActor(context), input);
     }),
 
   drain: base
     .input(queueActionInput.extend({ delayed: z.boolean().default(false) }))
     .use(authed)
-    .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      await drainQueue(connection, input.queueName, prefix, input.delayed);
-      return { ok: true as const };
+      return context.services.queueAdmin.drain(toActor(context), input);
     }),
 
   clean: base
@@ -529,109 +410,130 @@ const queueAdminRouter = {
       }),
     )
     .use(authed)
-    .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      const removed = await cleanQueue(
-        connection,
-        input.queueName,
-        prefix,
-        input.grace,
-        input.limit,
-        input.type,
-      );
-      return { removed };
+      return context.services.queueAdmin.clean(toActor(context), input);
     }),
 
   obliterate: base
     .input(queueActionInput)
     .use(authed)
-    .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const { connection, prefix } = context.realtime.getConnection(
-        input.redisInstanceId,
-      );
-      await obliterateQueue(connection, input.queueName, prefix);
-      await context.realtime.refreshDiscovery(input.redisInstanceId);
-      return { ok: true as const };
+      return context.services.queueAdmin.obliterate(toActor(context), input);
     }),
 };
 
 const bookmarkRouter = {
-  list: base
+  listFolders: base
     .input(z.object({ workspaceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.workspaceId, input.workspaceId));
-    }),
-
-  create: base
-    .input(
-      z.object({
-        workspaceId: z.string().length(24),
-        folderId: z.string().length(24).optional(),
-        targetType: z.enum(["queue", "job"]),
-        targetRef: z.record(z.unknown()),
-        isShared: z.boolean().default(false),
-      }),
-    )
-    .use(authed)
-    .handler(async ({ context, input }) => {
-      const id = createId();
-      await context.db.insert(bookmarks).values({
-        id,
-        workspaceId: input.workspaceId,
-        folderId: input.folderId,
-        targetType: input.targetType,
-        targetRef: input.targetRef,
-        isShared: input.isShared,
-        createdBy: context.user!.id,
-      });
-      return { id };
-    }),
-
-  delete: base
-    .input(z.object({ id: z.string().length(24) }))
-    .use(authed)
-    .handler(async ({ context, input }) => {
-      await context.db.delete(bookmarks).where(eq(bookmarks.id, input.id));
-      return { ok: true as const };
+      return context.services.bookmark.listFolders(toActor(context), input.workspaceId);
     }),
 
   createFolder: base
     .input(
       z.object({
         workspaceId: z.string().length(24),
-        name: z.string().min(1),
-        parentId: z.string().length(24).optional(),
+        name: z.string().trim().min(1).max(100),
+        isShared: z.boolean().optional(),
       }),
     )
     .use(authed)
     .handler(async ({ context, input }) => {
-      const id = createId();
-      await context.db.insert(bookmarkFolders).values({
-        id,
-        workspaceId: input.workspaceId,
-        name: input.name,
-        parentId: input.parentId,
-        createdBy: context.user!.id,
-      });
-      return { id };
+      return context.services.bookmark.createFolder(toActor(context), input);
     }),
 
-  listFolders: base
-    .input(z.object({ workspaceId: z.string().length(24) }))
+  updateFolder: base
+    .input(
+      z.object({
+        id: z.string().length(24),
+        name: z.string().trim().min(1).max(100).optional(),
+        isShared: z.boolean().optional(),
+      }),
+    )
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.db
-        .select()
-        .from(bookmarkFolders)
-        .where(eq(bookmarkFolders.workspaceId, input.workspaceId));
+      return context.services.bookmark.updateFolder(toActor(context), input);
+    }),
+
+  deleteFolder: base
+    .input(z.object({ id: z.string().length(24) }))
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.bookmark.deleteFolder(toActor(context), input.id);
+    }),
+
+  listBookmarks: base
+    .input(
+      z.object({
+        workspaceId: z.string().length(24),
+        folderId: z.string().length(24),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.bookmark.listBookmarks(toActor(context), input);
+    }),
+
+  getBookmark: base
+    .input(z.object({ id: z.string().length(24) }))
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.bookmark.getBookmark(toActor(context), input.id);
+    }),
+
+  createBookmark: base
+    .input(
+      z.object({
+        workspaceId: z.string().length(24),
+        folderId: z.string().length(24),
+        redisInstanceId: z.string().length(24),
+        queueName: z.string().min(1),
+        jobId: z.string().min(1),
+        environmentId: z.string().length(24),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.bookmark.createBookmark(toActor(context), input);
+    }),
+
+  deleteBookmark: base
+    .input(z.object({ id: z.string().length(24) }))
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.bookmark.deleteBookmark(toActor(context), input.id);
+    }),
+
+  createNote: base
+    .input(
+      z.object({
+        bookmarkId: z.string().length(24),
+        body: z.string().trim().min(1).max(5000),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.bookmark.createNote(toActor(context), input);
+    }),
+
+  updateNote: base
+    .input(
+      z.object({
+        id: z.string().length(24),
+        body: z.string().trim().min(1).max(5000),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.bookmark.updateNote(toActor(context), input);
+    }),
+
+  deleteNote: base
+    .input(z.object({ id: z.string().length(24) }))
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.bookmark.deleteNote(toActor(context), input.id);
     }),
 };
 
@@ -640,19 +542,10 @@ const alertRouter = {
     .input(z.object({ environmentId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.db
-        .select({
-          id: alerts.id,
-          name: alerts.name,
-          queueName: alerts.queueName,
-          redisInstanceId: alerts.redisInstanceId,
-          enabled: alerts.enabled,
-          config: alerts.config,
-          intervalMinutes: alerts.intervalMinutes,
-          cooldownMinutes: alerts.cooldownMinutes,
-        })
-        .from(alerts)
-        .where(eq(alerts.environmentId, input.environmentId));
+      return context.services.alert.list(
+        toActor(context),
+        input.environmentId,
+      );
     }),
 
   create: base
@@ -669,29 +562,8 @@ const alertRouter = {
       }),
     )
     .use(authed)
-    .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      const id = createId();
-      await context.db.insert(alerts).values({
-        id,
-        environmentId: input.environmentId,
-        redisInstanceId: input.redisInstanceId,
-        name: input.name,
-        queueName: input.queueName,
-        config: { condition: input.condition },
-        encryptedWebhook: encryptSecret(input.webhookUrl),
-        intervalMinutes: input.intervalMinutes,
-        cooldownMinutes: input.cooldownMinutes,
-      });
-
-      const [alert] = await context.db
-        .select()
-        .from(alerts)
-        .where(eq(alerts.id, id))
-        .limit(1);
-      if (alert) context.alertEngine.scheduleAlert(alert);
-
-      return { id };
+      return context.services.alert.create(toActor(context), input);
     }),
 
   delete: base
@@ -699,19 +571,14 @@ const alertRouter = {
     .use(authed)
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      context.alertEngine.stopAlert(input.id);
-      await context.db.delete(alerts).where(eq(alerts.id, input.id));
-      return { ok: true as const };
+      return context.services.alert.delete(input.id);
     }),
 
   listEvents: base
     .input(z.object({ alertId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.db
-        .select()
-        .from(alertEvents)
-        .where(eq(alertEvents.alertId, input.alertId));
+      return context.services.alert.listEvents(input.alertId);
     }),
 };
 
@@ -720,29 +587,10 @@ const inviteRouter = {
     .input(z.object({ token: z.string() }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      const tokenHash = createHash("sha256").update(input.token).digest("hex");
-      const [invite] = await context.db
-        .select()
-        .from(workspaceInvites)
-        .where(eq(workspaceInvites.tokenHash, tokenHash))
-        .limit(1);
-
-      if (!invite || invite.acceptedAt) notFound("Invite");
-      if (invite.expiresAt < new Date()) forbidden();
-
-      await context.db.insert(workspaceMembers).values({
-        id: createId(),
-        workspaceId: invite.workspaceId,
+      return context.services.invite.accept({
+        token: input.token,
         userId: context.user!.id,
-        role: invite.role,
       });
-
-      await context.db
-        .update(workspaceInvites)
-        .set({ acceptedAt: new Date() })
-        .where(eq(workspaceInvites.id, invite.id));
-
-      return { workspaceId: invite.workspaceId };
     }),
 };
 

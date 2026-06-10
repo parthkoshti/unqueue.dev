@@ -118,7 +118,7 @@ export const membersRouter = {
         invitedBy: user!.id,
       });
 
-      const platformURL = process.env.PLATFORM_URL ?? "http://localhost:5173";
+      const platformURL = process.env.PLATFORM_URL ?? "http://localhost:5174";
       const inviteUrl = `${platformURL}/invite/${token}`;
 
       return { inviteUrl, id };

@@ -76,7 +76,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-- Platform: http://localhost:5173
+- Platform: http://localhost:5174
 - API: http://localhost:3001
 
 4. (Optional) Run the demo BullMQ worker:
@@ -86,6 +86,42 @@ pnpm demo-worker
 ```
 
 Then add your BullMQ Redis instance in Settings.
+
+## Connecting your Redis
+
+Unstall connects to **your** Redis instances (separate from the app's own `REDIS_URL`). Each registered instance uses **two persistent connections**: one for queue reads and admin actions, and one for BullMQ `QueueEvents` realtime subscriptions.
+
+### Recommended setup
+
+1. Create a **dedicated ACL user** per environment — do not share the `default` superuser.
+2. Use **TLS** (`rediss://`) for managed providers (Redis Cloud, Upstash, ElastiCache, Azure Cache).
+3. If your provider requires ACL auth, set **username** and password in the connection form.
+4. Match the **BullMQ key prefix** to what your workers use (default: `bull`).
+
+### ACL permissions
+
+**Monitoring only** (view queues, jobs, metrics, bookmarks):
+
+- `@read` on BullMQ keys, or at minimum: `SCAN`, `GET`, `HGET`, `HGETALL`, `LRANGE`, `ZRANGE`, `ZCARD`, `LLEN`, `TYPE`, `PING`, `INFO`, `SUBSCRIBE` / `PSUBSCRIBE` (for events)
+
+**Admin actions** (retry/remove jobs, pause/drain/clean/obliterate queues):
+
+- Above plus write commands BullMQ uses: `DEL`, `HDEL`, `HSET`, `LPUSH`, `RPUSH`, `ZADD`, `ZREM`, `LREM`, `EVAL` / `EVALSHA`, `MULTI`, `EXEC`, etc.
+
+Example Redis 7 ACL (adjust key patterns to your prefix):
+
+```
+ACL SETUSER unstall-read on >your-password ~bull:* &* +@read +ping +info +psubscribe +subscribe
+ACL SETUSER unstall-admin on >your-password ~bull:* &* +@read +@write +@pubsub +ping +info
+```
+
+### Connection URL format
+
+```
+rediss://username:password@host:6380/0
+```
+
+Paste a URL in the connection form to pre-fill host, port, username, password, DB index, and TLS.
 
 ## Docker / Dokploy
 

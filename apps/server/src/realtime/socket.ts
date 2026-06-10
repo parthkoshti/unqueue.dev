@@ -55,8 +55,20 @@ export function attachSocketServer(
         const { rooms, lastSeq = {} } = data;
 
         for (const room of rooms) {
-          if (!canJoinRoom(room, socket.data.workspaceIds)) continue;
+          if (
+            !canJoinRoom(room, socket.data.workspaceIds, realtime)
+          ) {
+            continue;
+          }
           socket.join(room);
+
+          const queueRoom = parseQueueRoom(room);
+          if (queueRoom) {
+            void realtime.refreshCounts(
+              queueRoom.redisInstanceId,
+              queueRoom.queueName,
+            );
+          }
 
           if (realtime.shouldResync(room, lastSeq[room] ?? 0)) {
             socket.emit("resync", { room });
@@ -80,10 +92,55 @@ export function attachSocketServer(
   return io;
 }
 
-function canJoinRoom(room: string, workspaceIds: string[]): boolean {
+function parseQueueRoom(room: string): {
+  redisInstanceId: string;
+  queueName: string;
+} | null {
+  if (!room.startsWith("queue:")) return null;
+  const rest = room.slice("queue:".length);
+  const colon = rest.indexOf(":");
+  if (colon === -1) return null;
+  return {
+    redisInstanceId: rest.slice(0, colon),
+    queueName: rest.slice(colon + 1),
+  };
+}
+
+function parseRedisInstanceIdFromRoom(room: string): string | null {
+  if (room.startsWith("redis:")) {
+    return room.slice("redis:".length) || null;
+  }
+  if (room.startsWith("queue:")) {
+    const rest = room.slice("queue:".length);
+    const colon = rest.indexOf(":");
+    return colon === -1 ? rest : rest.slice(0, colon);
+  }
+  if (room.startsWith("job:")) {
+    const rest = room.slice("job:".length);
+    const firstColon = rest.indexOf(":");
+    if (firstColon === -1) return rest || null;
+    const secondColon = rest.indexOf(":", firstColon + 1);
+    return rest.slice(0, secondColon === -1 ? undefined : secondColon);
+  }
+  return null;
+}
+
+function canJoinRoom(
+  room: string,
+  workspaceIds: string[],
+  realtime: RealtimeManager,
+): boolean {
   if (room.startsWith("workspace:")) {
     const id = room.slice("workspace:".length);
     return workspaceIds.includes(id);
   }
-  return true;
+
+  const redisInstanceId = parseRedisInstanceIdFromRoom(room);
+  if (redisInstanceId) {
+    const workspaceId = realtime.getWorkspaceIdForInstance(redisInstanceId);
+    if (!workspaceId) return false;
+    return workspaceIds.includes(workspaceId);
+  }
+
+  return false;
 }

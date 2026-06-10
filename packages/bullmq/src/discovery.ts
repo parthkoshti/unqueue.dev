@@ -31,7 +31,7 @@ async function scanForQueues(connection: RedisConnection, prefix: string): Promi
       "MATCH",
       pattern,
       "COUNT",
-      100,
+      10000,
     );
     cursor = nextCursor;
 

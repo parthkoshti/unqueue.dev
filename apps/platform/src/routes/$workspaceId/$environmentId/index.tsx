@@ -1,97 +1,222 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { DatabaseIcon, InboxIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
 import { rpcClient } from "@/lib/api";
-import { Badge } from "@unstall/ui/components/badge";
-import { Button } from "@unstall/ui/components/button";
+import {
+  aggregateQueueStats,
+  getAttentionQueues,
+} from "@/lib/aggregate-queue-stats";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@unstall/ui/components/scroll-area";
+import {
+  EnvironmentQueuesTable,
+} from "@/components/environment-queues-table";
+import {
+  EnvironmentAttentionQueues,
+  EnvironmentJobStateBreakdown,
+  EnvironmentOverviewStatsGrid,
+} from "@/components/environment-overview-stats";
+import {
+  EnvironmentOverviewContentSkeleton,
+  EnvironmentOverviewHeaderSkeleton,
+  EnvironmentQueuesTableSkeleton,
+} from "@/components/environment-overview-skeleton";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@unstall/ui/components/card";
+import { RoutePending } from "@/lib/route-pending";
+import { RedisConnectionSheet } from "@/components/redis-connection-sheet";
+import {
+  environmentQueuesForceRefreshOptions,
+  environmentQueuesQueryOptions,
+  environmentRedisQueryOptions,
+} from "@/lib/environment-queues-query";
+import { useEnvironmentQueueSync } from "@/hooks/use-environment-queue-sync";
+import { useShellContext } from "@/hooks/use-shell-context";
 
 export const Route = createFileRoute("/$workspaceId/$environmentId/")({
+  pendingComponent: RoutePending,
   component: EnvironmentOverview,
 });
 
+const SKELETON_ROWS = 8;
+
 function EnvironmentOverview() {
   const { workspaceId, environmentId } = Route.useParams();
+  const { workspaceRole } = useShellContext();
+  const queryClient = useQueryClient();
+  const [connectionSheetOpen, setConnectionSheetOpen] = useState(false);
+  const [forceRefreshing, setForceRefreshing] = useState(false);
 
-  const redisQuery = useQuery({
-    queryKey: ["redis", environmentId],
-    queryFn: () => rpcClient.redis.list({ environmentId }),
+  const canManage = workspaceRole === "owner" || workspaceRole === "admin";
+
+  const envsQuery = useQuery({
+    queryKey: ["environments", workspaceId],
+    queryFn: () => rpcClient.environment.list({ workspaceId }),
   });
 
-  const queuesQuery = useQuery({
-    queryKey: ["queues", environmentId, redisQuery.data],
-    queryFn: async () => {
-      const instances = redisQuery.data ?? [];
-      const results = await Promise.all(
-        instances.map(async (instance) => {
-          const queues = await rpcClient.queue.list({
-            redisInstanceId: instance.id,
-          });
-          return queues.map((q) => ({ ...q, redisInstanceId: instance.id }));
-        }),
-      );
-      return results.flat();
-    },
-    enabled: !!redisQuery.data,
-  });
+  const environment = envsQuery.data?.find((e) => e.id === environmentId);
+
+  const redisQuery = useQuery(environmentRedisQueryOptions(environmentId));
+
+  const queuesQuery = useQuery(environmentQueuesQueryOptions(environmentId));
+
+  const queues = queuesQuery.data ?? [];
+  const redisInstances = redisQuery.data ?? [];
+  const redisInstanceIds = redisInstances.map((instance) => instance.id);
+  const connectedCount = redisInstances.filter(
+    (i) => i.status === "connected",
+  ).length;
+  const isLoading = redisQuery.isLoading;
+  const queuesLoading = queuesQuery.isLoading;
+  const isFetching =
+    redisQuery.isFetching || queuesQuery.isFetching || forceRefreshing;
+
+  const stats = aggregateQueueStats(queues);
+  const attentionQueues = getAttentionQueues(queues);
+
+  useEnvironmentQueueSync(environmentId, queues, redisInstanceIds);
+
+  const refresh = async () => {
+    setForceRefreshing(true);
+    try {
+      await Promise.all([
+        redisQuery.refetch(),
+        queryClient.fetchQuery(
+          environmentQueuesForceRefreshOptions(environmentId),
+        ),
+      ]);
+    } finally {
+      setForceRefreshing(false);
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-2">
-        <h1 className="text-sm font-medium">Queues</h1>
+      <div className="flex shrink-0 items-start justify-between gap-4 border-b px-4 py-3">
+        <div className="min-w-0 space-y-1">
+          {envsQuery.isLoading ? (
+            <EnvironmentOverviewHeaderSkeleton />
+          ) : (
+            <>
+              <h1 className="truncate font-medium">
+                {environment?.name ?? "Overview"}
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Queue and job health across this environment
+              </p>
+            </>
+          )}
+        </div>
+
         <Button
           size="sm"
           variant="outline"
-          onClick={() => queuesQuery.refetch()}
+          onClick={() => void refresh()}
+          disabled={isFetching}
         >
+          <RefreshCwIcon className={isFetching ? "animate-spin" : undefined} />
           Refresh
         </Button>
       </div>
-      <ScrollArea className="flex-1">
-        <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-[var(--color-background)]">
-            <tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted-foreground)]">
-              <th className="px-4 py-2 font-medium">Queue</th>
-              <th className="px-4 py-2 font-medium">Waiting</th>
-              <th className="px-4 py-2 font-medium">Active</th>
-              <th className="px-4 py-2 font-medium">Failed</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(queuesQuery.data ?? []).map((queue) => (
-              <tr
-                key={`${queue.redisInstanceId}-${queue.name}`}
-                className="border-b border-[var(--color-border)] hover:bg-[var(--color-accent)]/50"
-              >
-                <td className="px-4 py-2">
-                  <Link
-                    to="/$workspaceId/$environmentId/queues/$queueName"
-                    params={{
-                      workspaceId,
-                      environmentId,
-                      queueName: queue.name,
-                    }}
-                    search={{ redisInstanceId: queue.redisInstanceId }}
-                    className="font-medium hover:underline"
-                  >
-                    {queue.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-2">{queue.counts.waiting}</td>
-                <td className="px-4 py-2">{queue.counts.active}</td>
-                <td className="px-4 py-2">{queue.counts.failed}</td>
-                <td className="px-4 py-2">
-                  {queue.isPaused ? (
-                    <Badge variant="warning">Paused</Badge>
+
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-4 p-4">
+          {isLoading ? (
+            <EnvironmentOverviewContentSkeleton tableRows={SKELETON_ROWS} />
+          ) : redisInstances.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                  <DatabaseIcon className="size-4 text-muted-foreground" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">No connections</p>
+                  <p className="max-w-xs text-xs text-muted-foreground">
+                    Connect the Redis instance your BullMQ workers use to start
+                    monitoring queues.
+                  </p>
+                </div>
+                {canManage && (
+                  <Button size="sm" onClick={() => setConnectionSheetOpen(true)}>
+                    <PlusIcon />
+                    Add your first connection
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <EnvironmentOverviewStatsGrid
+                stats={stats}
+                connectedRedis={connectedCount}
+                totalRedis={redisInstances.length}
+              />
+
+              <EnvironmentJobStateBreakdown stats={stats} />
+
+              <EnvironmentAttentionQueues
+                queues={attentionQueues}
+                workspaceId={workspaceId}
+                environmentId={environmentId}
+              />
+
+              <Card className="overflow-hidden">
+                <CardHeader className="border-b border-border/60 pb-3">
+                  <CardTitle className="text-sm font-medium">All queues</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    {queuesLoading
+                      ? "Discovering queues..."
+                      : queues.length === 0
+                        ? "No queues discovered yet"
+                        : `${queues.length.toLocaleString()} ${queues.length === 1 ? "queue" : "queues"} · ${stats.totalJobs.toLocaleString()} jobs`}
+                  </p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {queuesLoading ? (
+                    <EnvironmentQueuesTableSkeleton rows={SKELETON_ROWS} />
+                  ) : queues.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+                      <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                        <InboxIcon className="size-4 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-medium">No queues found</p>
+                      <p className="max-w-xs text-xs text-muted-foreground">
+                        BullMQ queues will appear here once workers start using
+                        this Redis connection.
+                      </p>
+                    </div>
                   ) : (
-                    <Badge variant="success">Active</Badge>
+                    <EnvironmentQueuesTable
+                      queues={queues}
+                      workspaceId={workspaceId}
+                      environmentId={environmentId}
+                    />
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </div>
       </ScrollArea>
+
+      <RedisConnectionSheet
+        open={connectionSheetOpen}
+        onOpenChange={setConnectionSheetOpen}
+        mode="create"
+        environmentId={environmentId}
+        canManage={canManage}
+        onSuccess={() => {
+          setConnectionSheetOpen(false);
+          void queryClient.invalidateQueries({
+            queryKey: ["redis", environmentId],
+          });
+        }}
+      />
     </div>
   );
 }

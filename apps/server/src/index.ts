@@ -3,18 +3,18 @@ import { cors } from "hono/cors";
 import { RPCHandler } from "@orpc/server/fetch";
 import { createServer } from "node:http";
 import { createDb } from "@unstall/db";
+import { redisInstances } from "@unstall/db/schema";
 import { createAuth } from "@unstall/auth";
 import { createLogger } from "@unstall/logger";
+import { createServices, getMembership } from "@unstall/services";
 import { eq } from "drizzle-orm";
-import { redisInstances } from "@unstall/db/schema";
-import type { EncryptedEnvelope } from "@unstall/shared";
+import { createDiscoveryCache } from "@unstall/redis";
 import { env } from "./env.js";
 import { RealtimeManager } from "./realtime/manager.js";
 import { attachSocketServer } from "./realtime/socket.js";
 import { AlertEngine } from "./alerts/engine.js";
 import { appRouter } from "./rpc/router.js";
-import { getMembership } from "./rbac.js";
-import { decryptSecret } from "./encryption-service.js";
+import { createRpcHandlerPlugins } from "./rpc/logging.js";
 
 const logger = createLogger("server");
 const db = createDb(env.DATABASE_URL);
@@ -27,13 +27,46 @@ const auth = createAuth({
   platformURL: env.PLATFORM_URL,
 });
 
+const discoveryCache = createDiscoveryCache(env.REDIS_URL);
+
 const httpServer = createServer();
-const realtime = new RealtimeManager(null, logger);
+const realtime = new RealtimeManager(
+  null,
+  logger,
+  discoveryCache,
+  (redisInstanceId, status, error) => {
+  void db
+    .update(redisInstances)
+    .set({
+      status,
+      lastError: error ?? null,
+      ...(status === "connected" ? { lastConnectedAt: new Date() } : {}),
+    })
+    .where(eq(redisInstances.id, redisInstanceId))
+    .then(() => {
+      logger.debug({ redisInstanceId, status }, "Updated redis instance health");
+    })
+    .catch((err) => {
+      logger.error({ err, redisInstanceId, status }, "Failed to persist redis health");
+    });
+  },
+);
 const io = attachSocketServer(httpServer, auth, db, realtime, logger, env.PLATFORM_URL);
 realtime.setSocketServer(io);
 
-const alertEngine = new AlertEngine(db, realtime.getMetrics(), logger);
-const rpcHandler = new RPCHandler(appRouter);
+const alertEngine = new AlertEngine(db, realtime.getMetrics(), logger, env.ENCRYPTION_KEYS);
+const services = createServices({
+  db,
+  logger,
+  platformUrl: env.PLATFORM_URL,
+  encryptionKeys: env.ENCRYPTION_KEYS,
+  realtime,
+  alerts: alertEngine,
+});
+
+const rpcHandler = new RPCHandler(appRouter, {
+  plugins: createRpcHandlerPlugins(logger),
+});
 
 const app = new Hono();
 
@@ -64,8 +97,7 @@ app.use("/rpc/*", async (c, next) => {
     context: {
       db,
       logger,
-      realtime,
-      alertEngine,
+      services,
       user: session?.user
         ? {
             id: session.user.id,
@@ -82,6 +114,9 @@ app.use("/rpc/*", async (c, next) => {
 });
 
 httpServer.on("request", async (req, res) => {
+  // Socket.IO registers its own request handler on this server; skip those requests.
+  if (req.url?.startsWith("/socket.io")) return;
+
   const url = `http://${req.headers.host}${req.url}`;
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
@@ -104,6 +139,8 @@ httpServer.on("request", async (req, res) => {
   });
 
   const response = await app.fetch(request);
+  if (res.headersSent) return;
+
   res.statusCode = response.status;
   response.headers.forEach((value, key) => res.setHeader(key, value));
 
@@ -115,41 +152,11 @@ httpServer.on("request", async (req, res) => {
   }
 });
 
-httpServer.listen(Number(env.PORT), async () => {
+httpServer.listen(Number(env.PORT), () => {
   logger.info(`Server listening on http://localhost:${env.PORT}`);
-  await bootstrapRedisInstances();
-  await alertEngine.start();
+
+  void (async () => {
+    await services.redis.bootstrapInstances();
+    await alertEngine.start();
+  })();
 });
-
-async function bootstrapRedisInstances() {
-  const instances = await db.select().from(redisInstances);
-
-  for (const instance of instances) {
-    try {
-      const password = decryptSecret(
-        instance.encryptedCredentials as EncryptedEnvelope,
-      );
-      await realtime.registerInstance({
-        id: instance.id,
-        host: instance.host,
-        port: instance.port,
-        password: password || undefined,
-        tls: instance.tls,
-        bullmqPrefix: instance.bullmqPrefix,
-      });
-      await db
-        .update(redisInstances)
-        .set({ status: "connected", lastConnectedAt: new Date() })
-        .where(eq(redisInstances.id, instance.id));
-    } catch (error) {
-      logger.error({ error, id: instance.id }, "Failed to connect redis instance");
-      await db
-        .update(redisInstances)
-        .set({
-          status: "error",
-          lastError: error instanceof Error ? error.message : "Connection failed",
-        })
-        .where(eq(redisInstances.id, instance.id));
-    }
-  }
-}

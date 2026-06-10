@@ -1,14 +1,15 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { authClient } from "@/lib/auth";
+import { sessionQueryOptions } from "@/lib/session-query";
 import { Button } from "@unstall/ui/components/button";
 import { Input } from "@unstall/ui/components/input";
 import { Label } from "@unstall/ui/components/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@unstall/ui/components/card";
 
 export const Route = createFileRoute("/signup")({
-  beforeLoad: async () => {
-    const session = await authClient.getSession();
+  beforeLoad: async ({ context }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
     if (session.data?.user) throw redirect({ to: "/" });
   },
   component: SignupPage,
@@ -30,7 +31,7 @@ function SignupPage() {
   });
 
   return (
-    <div className="flex min-h-full items-center justify-center p-4">
+    <div className="flex min-h-svh items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Create your Unstall account</CardTitle>

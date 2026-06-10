@@ -1,52 +1,58 @@
-import { Link } from "@tanstack/react-router";
-import { CommandPalette } from "./command-palette";
-import { Separator } from "@unstall/ui/components/separator";
+import { useState } from "react";
+import { AppSidebar } from "@/components/app-sidebar";
+import { CommandPalette } from "@/components/command-palette";
+import { NavSearch } from "@/components/nav-search";
+import { PageBreadcrumbs } from "@/components/page-breadcrumbs";
+import { ShellLayoutProvider, ShellProvider } from "@/components/shell-context";
+import { useShellContext } from "@/hooks/use-shell-context";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-export function AppShell({
-  workspaceId,
-  environmentId,
-  children,
-}: {
-  workspaceId: string;
-  environmentId: string;
-  children: React.ReactNode;
-}) {
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const [commandOpen, setCommandOpen] = useState(false);
+  const { workspaceId, environmentId, hasNavigationContext } = useShellContext();
+
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex h-10 items-center gap-3 border-b border-[var(--color-border)] px-3">
-        <Link to="/" className="text-sm font-semibold">
-          Unstall
-        </Link>
-        <Separator orientation="vertical" className="h-4" />
-        <nav className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
-          <Link
-            to="/$workspaceId/$environmentId"
-            params={{ workspaceId, environmentId }}
-            className="hover:text-[var(--color-foreground)]"
-          >
-            Queues
-          </Link>
-          <Link
-            to="/$workspaceId/bookmarks"
-            params={{ workspaceId }}
-            className="hover:text-[var(--color-foreground)]"
-          >
-            Bookmarks
-          </Link>
-          <Link
-            to="/$workspaceId/settings/members"
-            params={{ workspaceId }}
-            className="hover:text-[var(--color-foreground)]"
-          >
-            Settings
-          </Link>
-        </nav>
-        <div className="ml-auto text-xs text-[var(--color-muted-foreground)]">
-          Cmd+K
-        </div>
-      </header>
-      <main className="flex-1 overflow-hidden">{children}</main>
-      <CommandPalette workspaceId={workspaceId} environmentId={environmentId} />
-    </div>
+    <ShellLayoutProvider>
+      <ShellProvider
+        value={{
+          openCommandPalette: () => {
+            if (hasNavigationContext) setCommandOpen(true);
+          },
+        }}
+      >
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar workspaceId={workspaceId} environmentId={environmentId} />
+            <SidebarInset className="flex h-svh flex-col">
+              <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
+                <SidebarTrigger className="-ml-1" />
+                <PageBreadcrumbs />
+                {hasNavigationContext && (
+                  <div className="ml-auto shrink-0">
+                    <NavSearch />
+                  </div>
+                )}
+              </header>
+              <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {children}
+              </main>
+            </SidebarInset>
+            {hasNavigationContext && workspaceId && environmentId && (
+              <CommandPalette
+                workspaceId={workspaceId}
+                environmentId={environmentId}
+                open={commandOpen}
+                onOpenChange={setCommandOpen}
+              />
+            )}
+          </SidebarProvider>
+        </TooltipProvider>
+      </ShellProvider>
+    </ShellLayoutProvider>
   );
 }

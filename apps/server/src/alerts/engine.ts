@@ -6,19 +6,23 @@ import { evaluateCondition } from "./conditions.js";
 import { createId } from "@unstall/shared";
 import type { Logger } from "@unstall/logger";
 import type { MetricsAggregator } from "@unstall/bullmq";
-import { decryptSecret } from "../encryption-service.js";
+import { createEncryptionService, type EncryptionService } from "@unstall/services";
 import type { EncryptedEnvelope } from "@unstall/shared";
 
 type AlertRow = typeof alerts.$inferSelect;
 
 export class AlertEngine {
   private timers = new Map<string, ReturnType<typeof setInterval>>();
+  private encryption: EncryptionService;
 
   constructor(
     private db: Database,
     private metrics: MetricsAggregator,
     private logger: Logger,
-  ) {}
+    encryptionKeys: string,
+  ) {
+    this.encryption = createEncryptionService(encryptionKeys);
+  }
 
   async start(): Promise<void> {
     const rows = await this.db
@@ -98,7 +102,7 @@ export class AlertEngine {
     condition: AlertCondition,
     metrics: unknown,
   ): Promise<void> {
-    const webhook = decryptSecret(
+    const webhook = this.encryption.decrypt(
       alert.encryptedWebhook as EncryptedEnvelope,
     );
 

@@ -1,5 +1,4 @@
 # Run `doppler setup` from the repo root to link this directory to your Doppler project.
-# Recommended: project `unstall`, config `dev` for local development.
 setup:
-  - project: unstall
+  - project: apps
     config: dev

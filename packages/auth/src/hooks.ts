@@ -1,4 +1,8 @@
-import { createId } from "@unstall/shared";
+import {
+  createId,
+  DEFAULT_ENVIRONMENT_NAME,
+  DEFAULT_ENVIRONMENT_NAMES,
+} from "@unstall/shared";
 import type { Database } from "@unstall/db";
 import { environments, workspaceMembers, workspaces } from "@unstall/db/schema";
 
@@ -8,8 +12,17 @@ export async function bootstrapWorkspace(
   userName: string,
 ) {
   const workspaceId = createId();
-  const environmentId = createId();
   const memberId = createId();
+
+  const defaultEnvironments = DEFAULT_ENVIRONMENT_NAMES.map((name) => ({
+    id: createId(),
+    workspaceId,
+    name,
+  }));
+
+  const defaultEnvironment = defaultEnvironments.find(
+    (environment) => environment.name === DEFAULT_ENVIRONMENT_NAME,
+  );
 
   await db.insert(workspaces).values({
     id: workspaceId,
@@ -23,11 +36,10 @@ export async function bootstrapWorkspace(
     role: "owner",
   });
 
-  await db.insert(environments).values({
-    id: environmentId,
-    workspaceId,
-    name: "Production",
-  });
+  await db.insert(environments).values(defaultEnvironments);
 
-  return { workspaceId, environmentId };
+  return {
+    workspaceId,
+    environmentId: defaultEnvironment?.id ?? defaultEnvironments[0]!.id,
+  };
 }

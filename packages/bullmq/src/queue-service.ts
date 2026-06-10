@@ -1,42 +1,56 @@
-import { Job, Queue } from "bullmq";
+import { Job } from "bullmq";
 import type { RedisConnection } from "./redis-types.js";
+import { withQueue } from "./queue-runner.js";
+import type { QueuePoolContext } from "./queue-pool-context.js";
 import { jobLogSchema } from "@unstall/validators";
 import type { JobSummary, QueueCounts, QueueMeta } from "./types.js";
-
-export function createQueue(
-  connection: RedisConnection,
-  queueName: string,
-  prefix: string,
-): Queue {
-  return new Queue(queueName, {
-    connection: connection as never,
-    prefix,
-  });
-}
 
 export async function getQueueMeta(
   connection: RedisConnection,
   queueName: string,
   prefix: string,
+  pool?: QueuePoolContext,
 ): Promise<QueueMeta> {
-  const queue = createQueue(connection, queueName, prefix);
-  const [counts, isPaused] = await Promise.all([
-    queue.getJobCounts(
-      "waiting",
-      "active",
-      "delayed",
-      "completed",
-      "failed",
-      "paused",
-    ),
-    queue.isPaused(),
-  ]);
+  return withQueue(
+    connection,
+    queueName,
+    prefix,
+    async (queue) => {
+    const [counts, isPaused] = await Promise.all([
+      queue.getJobCounts(
+        "waiting",
+        "active",
+        "delayed",
+        "completed",
+        "failed",
+        "paused",
+        "prioritized",
+        "waiting-children",
+        "repeat",
+      ),
+      queue.isPaused(),
+    ]);
 
-  return {
-    name: queueName,
-    isPaused,
-    counts: counts as QueueCounts,
-  };
+    const typedCounts = counts as Record<string, number>;
+
+    return {
+      name: queueName,
+      isPaused,
+      counts: {
+        waiting: typedCounts.waiting ?? 0,
+        active: typedCounts.active ?? 0,
+        delayed: typedCounts.delayed ?? 0,
+        completed: typedCounts.completed ?? 0,
+        failed: typedCounts.failed ?? 0,
+        paused: typedCounts.paused ?? 0,
+        prioritized: typedCounts.prioritized ?? 0,
+        "waiting-children": typedCounts["waiting-children"] ?? 0,
+        schedulers: typedCounts.repeat ?? 0,
+      },
+    };
+  },
+    pool,
+  );
 }
 
 const JOB_STATES = [
@@ -46,31 +60,79 @@ const JOB_STATES = [
   "completed",
   "failed",
   "paused",
+  "prioritized",
+  "waiting-children",
 ] as const;
 
 export type JobState = (typeof JOB_STATES)[number];
+export type JobListState = JobState | "all" | "schedulers";
+
+async function toJobSummaries(
+  jobs: (Job | undefined)[],
+  knownState?: JobState,
+): Promise<JobSummary[]> {
+  const filtered = jobs.filter((job): job is Job => job != null);
+
+  if (knownState) {
+    return filtered
+      .map((job) => ({
+        ...toJobSummary(job),
+        state: knownState,
+      }))
+      .sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  const summaries = await Promise.all(
+    filtered.map(async (job) => ({
+      ...toJobSummary(job),
+      state: await job.getState(),
+    })),
+  );
+
+  return summaries.sort((a, b) => b.timestamp - a.timestamp);
+}
 
 export async function listJobs(
   connection: RedisConnection,
   queueName: string,
   prefix: string,
-  state: JobState,
+  state: JobListState,
   start = 0,
   end = 49,
+  pool?: QueuePoolContext,
 ): Promise<JobSummary[]> {
-  const queue = createQueue(connection, queueName, prefix);
-  const jobs = await queue.getJobs([state], start, end, false);
+  if (state === "schedulers") {
+    return [];
+  }
 
-  const summaries = await Promise.all(
-    jobs
-      .filter((job): job is Job => job !== null)
-      .map(async (job) => ({
-        ...toJobSummary(job),
-        state: await job.getState(),
-      })),
+  return withQueue(
+    connection,
+    queueName,
+    prefix,
+    async (queue) => {
+      if (state === "all") {
+        // Get counts first to skip states with no jobs — avoids fetching
+        // and deserializing 8×(end+1) job records when most states are empty.
+        const rawCounts = await queue.getJobCounts(...JOB_STATES);
+        const counts = rawCounts as Record<string, number>;
+        const nonEmptyStates = JOB_STATES.filter((s) => (counts[s] ?? 0) > 0);
+        if (nonEmptyStates.length === 0) return [];
+
+        const perStateCap = end + 1;
+        const batches = await Promise.all(
+          nonEmptyStates.map((jobState) =>
+            queue.getJobs([jobState], 0, perStateCap, false),
+          ),
+        );
+        const merged = await toJobSummaries(batches.flat());
+        return merged.slice(start, end + 1);
+      }
+
+      const jobs = await queue.getJobs([state], start, end, false);
+      return toJobSummaries(jobs, state);
+    },
+    pool,
   );
-
-  return summaries.sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export function toJobSummary(job: Job): JobSummary {
@@ -84,6 +146,17 @@ export function toJobSummary(job: Job): JobSummary {
     attemptsMade: job.attemptsMade,
     failedReason: job.failedReason,
     delay: job.delay,
+    priority: job.priority,
+    stacktrace: job.stacktrace?.length ? job.stacktrace : undefined,
+    returnValue: job.returnvalue,
+    opts: {
+      attempts: job.opts.attempts,
+      backoff: job.opts.backoff,
+      priority: job.opts.priority,
+      delay: job.opts.delay,
+      removeOnComplete: job.opts.removeOnComplete,
+      removeOnFail: job.opts.removeOnFail,
+    },
   };
 }
 
@@ -93,11 +166,12 @@ export async function getJobState(
   prefix: string,
   jobId: string,
 ): Promise<JobSummary | null> {
-  const queue = createQueue(connection, queueName, prefix);
-  const job = await queue.getJob(jobId);
-  if (!job) return null;
-  const state = await job.getState();
-  return { ...toJobSummary(job), state };
+  return withQueue(connection, queueName, prefix, async (queue) => {
+    const job = await queue.getJob(jobId);
+    if (!job) return null;
+    const jobState = await job.getState();
+    return { ...toJobSummary(job), state: jobState };
+  });
 }
 
 export async function getJobPayload(
@@ -106,10 +180,11 @@ export async function getJobPayload(
   prefix: string,
   jobId: string,
 ): Promise<unknown> {
-  const queue = createQueue(connection, queueName, prefix);
-  const job = await queue.getJob(jobId);
-  if (!job) return null;
-  return job.data;
+  return withQueue(connection, queueName, prefix, async (queue) => {
+    const job = await queue.getJob(jobId);
+    if (!job) return null;
+    return job.data;
+  });
 }
 
 export async function getJobProgress(
@@ -118,10 +193,11 @@ export async function getJobProgress(
   prefix: string,
   jobId: string,
 ): Promise<unknown> {
-  const queue = createQueue(connection, queueName, prefix);
-  const job = await queue.getJob(jobId);
-  if (!job) return null;
-  return job.progress;
+  return withQueue(connection, queueName, prefix, async (queue) => {
+    const job = await queue.getJob(jobId);
+    if (!job) return null;
+    return job.progress;
+  });
 }
 
 export type ParsedLog = {
@@ -141,9 +217,10 @@ export async function getJobLogs(
   prefix: string,
   jobId: string,
 ): Promise<ParsedLog[]> {
-  const queue = createQueue(connection, queueName, prefix);
-  const { logs } = await queue.getJobLogs(jobId);
-  return logs.map(parseLogLine);
+  return withQueue(connection, queueName, prefix, async (queue) => {
+    const { logs } = await queue.getJobLogs(jobId);
+    return logs.map(parseLogLine);
+  });
 }
 
 function parseLogLine(line: string): ParsedLog {
@@ -157,4 +234,63 @@ function parseLogLine(line: string): ParsedLog {
     // fall through
   }
   return { format: "raw", raw: line };
+}
+
+// BullMQ v5 key layout: {prefix}:{name}:{suffix}
+// wait/active/paused use LLEN; everything else uses ZCARD.
+// isPaused = HEXISTS {prefix}:{name}:meta paused
+//
+// Note: BullMQ v5 deprecated a "0:"-prefixed tail marker in the wait/paused
+// lists (to be removed in v6). Fresh v5 queues don't have it. We skip the
+// marker correction here since it's a minor off-by-1 on a legacy edge case.
+const FIELDS_PER_QUEUE = 10;
+
+export async function getQueueMetaBatch(
+  connection: RedisConnection,
+  queueNames: string[],
+  prefix: string,
+): Promise<QueueMeta[]> {
+  if (queueNames.length === 0) return [];
+
+  const pipeline = connection.pipeline();
+  for (const name of queueNames) {
+    const k = (s: string) => `${prefix}:${name}:${s}`;
+    pipeline.llen(k("wait"));               // 0 waiting
+    pipeline.llen(k("active"));             // 1 active
+    pipeline.zcard(k("delayed"));           // 2 delayed
+    pipeline.zcard(k("completed"));         // 3 completed
+    pipeline.zcard(k("failed"));            // 4 failed
+    pipeline.llen(k("paused"));             // 5 paused
+    pipeline.zcard(k("prioritized"));       // 6 prioritized
+    pipeline.zcard(k("waiting-children"));  // 7 waiting-children
+    pipeline.zcard(k("repeat"));            // 8 schedulers
+    pipeline.hexists(k("meta"), "paused");  // 9 isPaused
+  }
+
+  const results = await pipeline.exec();
+
+  const num = (i: number): number => {
+    const entry = results?.[i];
+    return entry && !entry[0] ? (entry[1] as number) : 0;
+  };
+  const bool = (i: number): boolean => {
+    const entry = results?.[i];
+    return entry && !entry[0] ? entry[1] === 1 : false;
+  };
+
+  return queueNames.map((name, qi) => {
+    const o = qi * FIELDS_PER_QUEUE;
+    const counts: QueueCounts = {
+      waiting: num(o + 0),
+      active: num(o + 1),
+      delayed: num(o + 2),
+      completed: num(o + 3),
+      failed: num(o + 4),
+      paused: num(o + 5),
+      prioritized: num(o + 6),
+      "waiting-children": num(o + 7),
+      schedulers: num(o + 8),
+    };
+    return { name, isPaused: bool(o + 9), counts };
+  });
 }

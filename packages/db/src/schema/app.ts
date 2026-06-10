@@ -93,6 +93,9 @@ export const redisInstances = pgTable("redis_instances", {
   host: text("host").notNull(),
   port: integer("port").notNull(),
   tls: boolean("tls").notNull().default(false),
+  username: text("username"),
+  db: integer("db").notNull().default(0),
+  tlsServername: text("tls_servername"),
   encryptedCredentials: jsonb("encrypted_credentials").notNull(),
   bullmqPrefix: varchar("bullmq_prefix", { length: 100 }).notNull().default("bull"),
   status: redisStatusEnum("status").notNull().default("disconnected"),
@@ -114,7 +117,7 @@ export const bookmarkFolders = pgTable("bookmark_folders", {
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  parentId: varchar("parent_id", { length: 24 }),
+  isShared: boolean("is_shared").notNull().default(false),
   createdBy: varchar("created_by", { length: 24 })
     .notNull()
     .references(() => users.id),
@@ -126,17 +129,29 @@ export const bookmarks = pgTable("bookmarks", {
   workspaceId: varchar("workspace_id", { length: 24 })
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  folderId: varchar("folder_id", { length: 24 }).references(
-    () => bookmarkFolders.id,
-    { onDelete: "set null" },
-  ),
+  folderId: varchar("folder_id", { length: 24 })
+    .notNull()
+    .references(() => bookmarkFolders.id, { onDelete: "cascade" }),
   targetType: bookmarkTargetEnum("target_type").notNull(),
   targetRef: jsonb("target_ref").notNull(),
-  isShared: boolean("is_shared").notNull().default(false),
+  snapshot: jsonb("snapshot").notNull(),
   createdBy: varchar("created_by", { length: 24 })
     .notNull()
     .references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const bookmarkNotes = pgTable("bookmark_notes", {
+  id: varchar("id", { length: 24 }).primaryKey(),
+  bookmarkId: varchar("bookmark_id", { length: 24 })
+    .notNull()
+    .references(() => bookmarks.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 24 })
+    .notNull()
+    .references(() => users.id),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const alerts = pgTable("alerts", {

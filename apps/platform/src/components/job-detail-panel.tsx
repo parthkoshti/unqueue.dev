@@ -1,19 +1,150 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookmarkIcon, CheckIcon, CopyIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BookmarkFolderPicker } from "@/components/bookmark-folder-picker";
 import { rpcClient } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import {
+  getSocket,
+  onSocketEvent,
+  subscribeRooms,
+  unsubscribeRooms,
+} from "@/lib/socket";
 import { Badge } from "@unstall/ui/components/badge";
-import { Button } from "@unstall/ui/components/button";
-import { ScrollArea } from "@unstall/ui/components/scroll-area";
-import { Separator } from "@unstall/ui/components/separator";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { JobStatusChip } from "@/components/job-status-chip";
+import { CodeBlock } from "@/components/code-block";
+import {
+  CodeBlockSkeleton,
+  DetailValueSkeleton,
+} from "@/components/job-detail-panel-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  formatDelay,
+  formatDuration,
+  formatJobTimestamp,
+} from "@/lib/format-timestamp";
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    void navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex shrink-0 items-center justify-center rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      aria-label={copied ? "Copied" : "Copy job ID"}
+    >
+      {copied ? (
+        <CheckIcon className="size-3 text-emerald-600 dark:text-emerald-400" />
+      ) : (
+        <CopyIcon className="size-3" />
+      )}
+    </button>
+  );
+}
+
+function DetailRow({
+  label,
+  children,
+  mono,
+}: {
+  label: string;
+  children: React.ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 py-px">
+      <dt className="whitespace-nowrap text-[11px] leading-tight text-muted-foreground">
+        {label}
+      </dt>
+      <dd
+        className={cn(
+          "min-w-0 text-[11px] leading-tight",
+          mono && "font-mono tabular-nums",
+        )}
+      >
+        {children}
+      </dd>
+    </div>
+  );
+}
 
 export function JobDetailPanel({
+  workspaceId,
+  environmentId,
   redisInstanceId,
   queueName,
   jobId,
+  canWrite = true,
 }: {
+  workspaceId: string;
+  environmentId: string;
   redisInstanceId: string;
   queueName: string;
   jobId: string;
+  canWrite?: boolean;
 }) {
+  const queryClient = useQueryClient();
+  const [bookmarkPickerOpen, setBookmarkPickerOpen] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(() =>
+    getSocket().connected,
+  );
+
+  useEffect(() => {
+    const socket = getSocket();
+    const onConnect = () => setSocketConnected(true);
+    const onDisconnect = () => setSocketConnected(false);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    setSocketConnected(socket.connected);
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+    };
+  }, []);
+
+  const jobRoom = `job:${redisInstanceId}:${queueName}:${jobId}`;
+
+  useEffect(() => {
+    subscribeRooms([jobRoom]);
+
+    const offEvent = onSocketEvent((data) => {
+      if (data.room !== jobRoom) return;
+      if (data.type === "job:update" || data.type === "job:progress") {
+        void queryClient.invalidateQueries({
+          queryKey: ["job", redisInstanceId, queueName, jobId],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["job-progress", redisInstanceId, queueName, jobId],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["job-logs", redisInstanceId, queueName, jobId],
+        });
+      }
+    });
+
+    return () => {
+      offEvent();
+      unsubscribeRooms([jobRoom]);
+    };
+  }, [jobRoom, jobId, queueName, queryClient, redisInstanceId]);
+
+  const pollInterval = socketConnected ? false : 2000;
+
   const jobQuery = useQuery({
     queryKey: ["job", redisInstanceId, queueName, jobId],
     queryFn: () => rpcClient.job.get({ redisInstanceId, queueName, jobId }),
@@ -23,120 +154,347 @@ export function JobDetailPanel({
     queryKey: ["job-payload", redisInstanceId, queueName, jobId],
     queryFn: () =>
       rpcClient.job.getPayload({ redisInstanceId, queueName, jobId }),
-    enabled: !!jobQuery.data,
   });
 
   const progressQuery = useQuery({
     queryKey: ["job-progress", redisInstanceId, queueName, jobId],
     queryFn: () =>
       rpcClient.job.getProgress({ redisInstanceId, queueName, jobId }),
-    refetchInterval: 2000,
+    refetchInterval: pollInterval,
   });
 
   const logsQuery = useQuery({
     queryKey: ["job-logs", redisInstanceId, queueName, jobId],
     queryFn: () => rpcClient.job.getLogs({ redisInstanceId, queueName, jobId }),
-    refetchInterval: 2000,
+    refetchInterval: pollInterval,
   });
 
+  const invalidateJob = () => {
+    queryClient.invalidateQueries({ queryKey: ["job", redisInstanceId, queueName, jobId] });
+    queryClient.invalidateQueries({
+      queryKey: ["jobs", redisInstanceId, queueName],
+    });
+  };
+
+  const runAction = async (action: () => Promise<unknown>) => {
+    await action();
+    invalidateJob();
+  };
+
   const job = jobQuery.data;
+  const isLoadingJob = jobQuery.isLoading;
+  const created = formatJobTimestamp(job?.timestamp);
+  const started = formatJobTimestamp(job?.processedOn);
+  const finished = formatJobTimestamp(job?.finishedOn);
+  const maxAttempts = job?.opts?.attempts;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-2">
-        <span className="text-sm font-medium">Job {jobId}</span>
-        {job && <Badge variant="outline">{job.state}</Badge>}
-        <div className="ml-auto flex gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              rpcClient.jobActions.retry({ redisInstanceId, queueName, jobId })
-            }
-          >
-            Retry
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              rpcClient.jobActions.promote({ redisInstanceId, queueName, jobId })
-            }
-          >
-            Promote
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() =>
-              rpcClient.jobActions.remove({ redisInstanceId, queueName, jobId })
-            }
-          >
-            Remove
-          </Button>
+    <>
+      <SheetHeader className="shrink-0 gap-3 border-b px-4 py-4 pr-12">
+        <div className="flex flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <SheetTitle>
+              Job <span className="font-mono">{jobId}</span>
+            </SheetTitle>
+            {isLoadingJob ? (
+              <Skeleton className="h-3.5 w-48" />
+            ) : (
+              job && (
+                <SheetDescription className="truncate">{job.name}</SheetDescription>
+              )
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isLoadingJob || !job || !canWrite}
+              onClick={() => setBookmarkPickerOpen(true)}
+            >
+              <BookmarkIcon />
+              Bookmark
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isLoadingJob || !job || !canWrite}
+              onClick={() =>
+                void runAction(() =>
+                  rpcClient.jobActions.retry({ redisInstanceId, queueName, jobId }),
+                )
+              }
+            >
+              Retry
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isLoadingJob || !job || !canWrite}
+              onClick={() =>
+                void runAction(() =>
+                  rpcClient.jobActions.promote({ redisInstanceId, queueName, jobId }),
+                )
+              }
+            >
+              Promote
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={isLoadingJob || !job || !canWrite}
+              onClick={() =>
+                void runAction(() =>
+                  rpcClient.jobActions.remove({ redisInstanceId, queueName, jobId }),
+                )
+              }
+            >
+              Remove
+            </Button>
+          </div>
         </div>
-      </div>
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4 text-xs">
+      </SheetHeader>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="space-y-5 text-xs">
           <section>
-            <h3 className="mb-2 font-medium text-[var(--color-muted-foreground)]">
-              Progress
+            <h3 className="mb-1.5 text-[11px] font-medium text-muted-foreground">
+              Details
             </h3>
-            {progressQuery.data &&
-            typeof progressQuery.data === "object" &&
-            progressQuery.data !== null ? (
-              <div className="space-y-1">
+            {isLoadingJob ? (
+              <div className="grid grid-cols-2 gap-x-6">
+                <dl className="min-w-0 space-y-0.5">
+                  <DetailRow label="Job ID" mono>
+                    <span className="inline-flex min-w-0 items-center gap-0.5">
+                      <span className="truncate">{jobId}</span>
+                      <CopyButton value={jobId} />
+                    </span>
+                  </DetailRow>
+                  <DetailRow label="Name">
+                    <DetailValueSkeleton className="w-28" />
+                  </DetailRow>
+                  <DetailRow label="Queue" mono>
+                    {queueName}
+                  </DetailRow>
+                  <DetailRow label="Created" mono>
+                    <DetailValueSkeleton className="w-32" />
+                  </DetailRow>
+                  <DetailRow label="Started" mono>
+                    <DetailValueSkeleton className="w-32" />
+                  </DetailRow>
+                  <DetailRow label="Finished" mono>
+                    <DetailValueSkeleton className="w-32" />
+                  </DetailRow>
+                  <DetailRow label="Duration" mono>
+                    <DetailValueSkeleton className="w-16" />
+                  </DetailRow>
+                </dl>
+                <dl className="min-w-0 space-y-0.5">
+                  <DetailRow label="Status">
+                    <DetailValueSkeleton className="h-5 w-16 rounded-full" />
+                  </DetailRow>
+                  <DetailRow label="Attempts" mono>
+                    <DetailValueSkeleton className="w-10" />
+                  </DetailRow>
+                  <DetailRow label="Priority" mono>
+                    <DetailValueSkeleton className="w-8" />
+                  </DetailRow>
+                  <DetailRow label="Delay" mono>
+                    <DetailValueSkeleton className="w-12" />
+                  </DetailRow>
+                </dl>
+              </div>
+            ) : !job ? (
+              <p className="text-muted-foreground">Job not found</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-6">
+                <dl className="min-w-0 space-y-0.5">
+                  <DetailRow label="Job ID" mono>
+                    <span className="inline-flex min-w-0 items-center gap-0.5">
+                      <span className="truncate">{job.id}</span>
+                      <CopyButton value={job.id} />
+                    </span>
+                  </DetailRow>
+                  <DetailRow label="Name">{job.name}</DetailRow>
+                  <DetailRow label="Queue" mono>
+                    {queueName}
+                  </DetailRow>
+                  <DetailRow label="Created" mono>
+                    <span title={created.title}>{created.label}</span>
+                  </DetailRow>
+                  <DetailRow label="Started" mono>
+                    <span title={started.title}>{started.label}</span>
+                  </DetailRow>
+                  <DetailRow label="Finished" mono>
+                    <span title={finished.title}>{finished.label}</span>
+                  </DetailRow>
+                  <DetailRow label="Duration" mono>
+                    {formatDuration(job.processedOn, job.finishedOn)}
+                  </DetailRow>
+                </dl>
+                <dl className="min-w-0 space-y-0.5">
+                  <DetailRow label="Status">
+                    <JobStatusChip state={job.state} />
+                  </DetailRow>
+                  <DetailRow label="Attempts" mono>
+                    {job.attemptsMade}
+                    {maxAttempts != null ? ` / ${maxAttempts}` : ""}
+                  </DetailRow>
+                  <DetailRow label="Priority" mono>
+                    {job.priority ?? job.opts?.priority ?? "—"}
+                  </DetailRow>
+                  <DetailRow label="Delay" mono>
+                    {formatDelay(job.delay ?? job.opts?.delay)}
+                  </DetailRow>
+                </dl>
+              </div>
+            )}
+          </section>
+
+          {job?.failedReason && (
+            <>
+              <Separator />
+              <section>
+                <h3 className="mb-2 font-medium text-destructive">Failed reason</h3>
+                <CodeBlock code={job.failedReason} variant="destructive" />
+              </section>
+            </>
+          )}
+
+          {job?.stacktrace && job.stacktrace.length > 0 && (
+            <>
+              <Separator />
+              <section>
+                <h3 className="mb-2 font-medium text-muted-foreground">Stack trace</h3>
+                <CodeBlock
+                  code={job.stacktrace.join("\n")}
+                  lang="javascript"
+                  maxHeight="12rem"
+                />
+              </section>
+            </>
+          )}
+
+          {job?.returnValue != null && (
+            <>
+              <Separator />
+              <section>
+                <h3 className="mb-2 font-medium text-muted-foreground">Return value</h3>
+                <CodeBlock value={job.returnValue} />
+              </section>
+            </>
+          )}
+
+          {job?.opts && (
+            <>
+              <Separator />
+              <section>
+                <h3 className="mb-2 font-medium text-muted-foreground">Options</h3>
+                <CodeBlock
+                  value={{
+                    attempts: job.opts.attempts,
+                    backoff: job.opts.backoff,
+                    priority: job.opts.priority,
+                    delay: job.opts.delay,
+                    removeOnComplete: job.opts.removeOnComplete,
+                    removeOnFail: job.opts.removeOnFail,
+                  }}
+                />
+              </section>
+            </>
+          )}
+
+          <Separator />
+
+          <section>
+            <h3 className="mb-2 font-medium text-muted-foreground">Progress</h3>
+            {progressQuery.isLoading ? (
+              <CodeBlockSkeleton lines={3} />
+            ) : progressQuery.data &&
+              typeof progressQuery.data === "object" &&
+              progressQuery.data !== null &&
+              Object.keys(progressQuery.data).length > 0 ? (
+              <div className="space-y-2">
                 {"currentStep" in progressQuery.data && (
-                  <p>Step: {String((progressQuery.data as { currentStep?: string }).currentStep)}</p>
+                  <DetailRow label="Step">
+                    {String((progressQuery.data as { currentStep?: string }).currentStep)}
+                  </DetailRow>
                 )}
                 {"percent" in progressQuery.data && (
-                  <p>Progress: {(progressQuery.data as { percent?: number }).percent}%</p>
+                  <DetailRow label="Percent">
+                    {(progressQuery.data as { percent?: number }).percent}%
+                  </DetailRow>
                 )}
                 {"steps" in progressQuery.data &&
                   Array.isArray((progressQuery.data as { steps?: unknown[] }).steps) &&
-                  (progressQuery.data as { steps: Array<{ name: string; status: string }> }).steps.map(
-                    (step) => (
-                      <div key={step.name} className="flex gap-2">
-                        <Badge variant="outline">{step.status}</Badge>
-                        <span>{step.name}</span>
-                      </div>
-                    ),
+                  (
+                    progressQuery.data as {
+                      steps: Array<{ name: string; status: string }>;
+                    }
+                  ).steps.map((step) => (
+                    <div key={step.name} className="flex gap-2">
+                      <Badge variant="outline">{step.status}</Badge>
+                      <span>{step.name}</span>
+                    </div>
+                  ))}
+                {!("currentStep" in progressQuery.data) &&
+                  !("percent" in progressQuery.data) &&
+                  !("steps" in progressQuery.data) && (
+                    <CodeBlock value={progressQuery.data} />
                   )}
               </div>
             ) : (
-              <p className="text-[var(--color-muted-foreground)]">No progress</p>
+              <p className="text-muted-foreground">No progress</p>
             )}
           </section>
+
           <Separator />
+
           <section>
-            <h3 className="mb-2 font-medium text-[var(--color-muted-foreground)]">
-              Payload
-            </h3>
-            <pre className="overflow-auto rounded-md bg-[var(--color-muted)] p-2 text-[11px]">
-              {JSON.stringify(payloadQuery.data, null, 2)}
-            </pre>
+            <h3 className="mb-2 font-medium text-muted-foreground">Payload</h3>
+            {payloadQuery.isLoading ? (
+              <CodeBlockSkeleton lines={6} />
+            ) : payloadQuery.data == null ? (
+              <p className="text-muted-foreground">No payload</p>
+            ) : (
+              <CodeBlock value={payloadQuery.data} />
+            )}
           </section>
+
           <Separator />
+
           <section>
-            <h3 className="mb-2 font-medium text-[var(--color-muted-foreground)]">
-              Logs
+            <h3 className="mb-2 font-medium text-muted-foreground">
+              Logs {(logsQuery.data?.length ?? 0) > 0 && `(${logsQuery.data?.length})`}
             </h3>
-            <div className="space-y-1">
-              {(logsQuery.data ?? []).slice(-20).map((log, i) => (
-                <div key={i} className="font-mono text-[11px]">
-                  {log.format === "json" && log.entry ? (
-                    <span>
-                      [{log.entry.level}] {log.entry.message}
-                    </span>
-                  ) : (
-                    <span className="text-[var(--color-warning)]">{log.raw}</span>
-                  )}
-                </div>
-              ))}
-            </div>
+            {logsQuery.isLoading ? (
+              <CodeBlockSkeleton lines={5} />
+            ) : (logsQuery.data ?? []).length === 0 ? (
+              <p className="text-muted-foreground">No logs</p>
+            ) : (
+              <CodeBlock
+                code={(logsQuery.data ?? [])
+                  .map((log) =>
+                    log.format === "json" && log.entry
+                      ? `[${log.entry.level}] ${log.entry.message}`
+                      : (log.raw ?? ""),
+                  )
+                  .join("\n")}
+              />
+            )}
           </section>
         </div>
-      </ScrollArea>
-    </div>
+      </div>
+
+      <BookmarkFolderPicker
+        open={bookmarkPickerOpen}
+        onOpenChange={setBookmarkPickerOpen}
+        workspaceId={workspaceId}
+        redisInstanceId={redisInstanceId}
+        queueName={queueName}
+        jobId={jobId}
+        environmentId={environmentId}
+        canWrite={canWrite}
+      />
+    </>
   );
 }

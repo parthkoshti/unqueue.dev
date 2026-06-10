@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.14.4",
+    "@orpc/experimental-pino": "^1.14.5",
     "@orpc/server": "^1.6.6",
     "@unstall/auth": "workspace:*",
     "@unstall/bullmq": "workspace:*",
@@ -24,6 +25,7 @@
     "@unstall/logger": "workspace:*",
     "@unstall/orpc": "workspace:*",
     "@unstall/redis": "workspace:*",
+    "@unstall/services": "workspace:*",
     "@unstall/shared": "workspace:*",
     "@unstall/validators": "workspace:*",
     "better-auth": "^1.2.12",
@@ -34,8 +36,8 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@unstall/config": "workspace:*",
     "@types/node": "^24.0.3",
+    "@unstall/config": "workspace:*",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

@@ -4,7 +4,7 @@
   "scripts": {
     "doppler:setup": "doppler setup",
     "doppler:secrets": "doppler secrets",
-    "dev": "doppler run -- turbo run dev --filter=@unstall/platform --filter=@unstall/server",
+    "dev": "doppler run -- turbo run dev --filter=@unstall/platform --filter=@unstall/server --filter=@unstall/bullmq --filter=@unstall/services",
     "dev:packages": "doppler run -- turbo run dev --filter='./packages/*'",
     "build": "doppler run -- turbo run build",
     "start": "doppler run -- turbo run start --filter=@unstall/server",
