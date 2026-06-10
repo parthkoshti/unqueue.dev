@@ -1,10 +1,5 @@
 import { io, type Socket } from "socket.io-client";
-
-// Connect directly to the API server rather than through the Vite dev proxy.
-// Vite's WS proxy accepts the upgrade (101) but doesn't reliably forward
-// Socket.IO frames, leaving the connection alive but silent. In production
-// VITE_API_URL is set; in local dev we fall back to the default API port.
-const socketUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { apiUrl } from "./api-url";
 
 type SocketEvent = {
   room: string;
@@ -60,7 +55,7 @@ function attachSocketListeners(s: Socket) {
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(socketUrl, {
+    socket = io(apiUrl, {
       path: "/socket.io",
       withCredentials: true,
       autoConnect: true,

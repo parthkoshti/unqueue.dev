@@ -27,7 +27,7 @@ ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 COPY --from=prune-platform /app/out/full/ .
 COPY --from=deps-platform /app/ .
-RUN --mount=type=cache,id=turbo-cache,target=/app/.turbo \
+RUN --mount=type=cache,id=turbo-cache,target=/app/.turbo/cache \
   pnpm turbo run build --filter=@unqueue/platform
 
 FROM nginx:alpine AS platform
@@ -51,7 +51,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 FROM base AS builder-server
 COPY --from=prune-server /app/out/full/ .
 COPY --from=deps-server /app/ .
-RUN --mount=type=cache,id=turbo-cache,target=/app/.turbo \
+RUN --mount=type=cache,id=turbo-cache,target=/app/.turbo/cache \
   pnpm turbo run build --filter=@unqueue/server
 
 FROM base AS server-deploy

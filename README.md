@@ -56,7 +56,7 @@ doppler secrets set ENCRYPTION_KEYS='[{"keyId":1,"key":"..."}]'
 doppler secrets set BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
 ```
 
-For local dev, `VITE_API_URL` can be left empty so the platform uses the Vite proxy to the API.
+For local dev, leave `VITE_API_URL` empty — the platform calls `http://localhost:3001` directly. In production, set `VITE_API_URL` to the public API origin (e.g. `https://unqueueserver.parthk.dev`) and `COOKIE_DOMAIN` to your parent domain (e.g. `.parthk.dev`) so auth cookies work across platform and API subdomains.
 
 ## Quick start (development)
 

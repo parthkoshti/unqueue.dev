@@ -18,15 +18,5 @@ export default defineConfig({
   server: {
     port: 5174,
     strictPort: true,
-    proxy: {
-      "/api": {
-        target: process.env.API_URL ?? "http://localhost:3001",
-        changeOrigin: true,
-      },
-      "/rpc": {
-        target: process.env.API_URL ?? "http://localhost:3001",
-        changeOrigin: true,
-      },
-    },
   },
 });
