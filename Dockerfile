@@ -15,7 +15,9 @@ RUN pnpm dlx turbo@2.5.4 prune @unqueue/platform @unqueue/server --docker
 # Install dependencies once for the pruned workspace.
 FROM base AS deps
 COPY --from=prune /app/out/json/ .
-COPY --from=prune /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+# Turbo prune strips injectWorkspacePackages from out/pnpm-lock.yaml, but
+# pnpm-workspace.yaml still has it — use the root lockfile to avoid a mismatch.
+COPY --from=prune /app/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm config set store-dir /pnpm/store && \
   pnpm install --frozen-lockfile
