@@ -5,14 +5,13 @@ RUN apk add --no-cache libc6-compat
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@11.5.3 --activate
-RUN pnpm add -g turbo@2.9.15
 WORKDIR /app
 
 # --- Platform pipeline ---
 
 FROM base AS prune-platform
 COPY . .
-RUN turbo prune @unqueue/platform --docker
+RUN pnpm dlx turbo@2.9.15 prune @unqueue/platform --docker
 
 FROM base AS deps-platform
 COPY --from=prune-platform /app/out/json/ .
@@ -40,7 +39,7 @@ EXPOSE 80
 
 FROM base AS prune-server
 COPY . .
-RUN turbo prune @unqueue/server --docker
+RUN pnpm dlx turbo@2.9.15 prune @unqueue/server --docker
 
 FROM base AS deps-server
 COPY --from=prune-server /app/out/json/ .
