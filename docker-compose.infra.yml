@@ -35,14 +35,19 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7
-    command: redis-server --maxmemory-policy noeviction
+    image: redis:8
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: >-
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory-policy noeviction
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", 'redis-cli -a "$REDIS_PASSWORD" ping | grep -q PONG']
       interval: 5s
       timeout: 3s
       retries: 5

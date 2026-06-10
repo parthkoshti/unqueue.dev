@@ -96,7 +96,7 @@ Two compose files:
 | `docker-compose.infra.yml` | Postgres, PgBouncer, Redis |
 | `docker-compose.yml` | Server, Platform |
 
-Deploy infra and app as separate Dokploy compose stacks (or environments). Point `DATABASE_URL` at PgBouncer (`pgbouncer:5432` in-network, port `6432` externally) and `REDIS_URL` at `redis:6379`.
+Deploy infra and app as separate Dokploy compose stacks (or environments). Point `DATABASE_URL` at PgBouncer (`pgbouncer:5432` in-network, port `6432` externally) and `REDIS_URL` at `redis://:REDIS_PASSWORD@redis:6379`.
 
 **Infra stack:** set env vars from `.env.infra.example` in Dokploy compose environment.
 
