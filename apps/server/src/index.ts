@@ -80,7 +80,7 @@ app.use(
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+app.use("/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.use("/rpc/*", async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
