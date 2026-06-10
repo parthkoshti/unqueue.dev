@@ -1,32 +1,16 @@
 # Infrastructure stack for Dokploy (dev / prod).
 # Deploy separately from docker-compose.yml (server + platform).
-#
-# Secrets: Doppler (project unstall). Set DOPPLER_TOKEN in Dokploy — a service token
-# scoped to the infra config (e.g. dev / prd). Reference: .env.infra.example
-#
-# Dokploy: compose file = docker-compose.infra.yml, env = DOPPLER_TOKEN only.
-#   docker compose -f docker-compose.infra.yml up -d
+# Env reference: .env.infra.example — set vars in Dokploy compose environment.
 
 services:
-  doppler-env:
-    image: dopplerhq/cli:latest
-    environment:
-      DOPPLER_TOKEN: ${DOPPLER_TOKEN:?DOPPLER_TOKEN is required}
-    volumes:
-      - ./.doppler-env:/secrets
-    entrypoint: ["/bin/sh", "-c"]
-    command: doppler secrets download --no-file --format docker > /secrets/infra.env
-    restart: "no"
-
   postgres:
     image: postgres:18
-    env_file:
-      - .doppler-env/infra.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    depends_on:
-      doppler-env:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"']
       interval: 5s
@@ -36,16 +20,15 @@ services:
 
   pgbouncer:
     image: edoburu/pgbouncer:v1.24.1-p1
-    env_file:
-      - .doppler-env/infra.env
     environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       POOL_MODE: transaction
+      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-200}
+      DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-20}
       AUTH_TYPE: scram-sha-256
     ports:
       - "${PGBOUNCER_PORT:-6432}:5432"
     depends_on:
-      doppler-env:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     restart: unless-stopped
@@ -57,9 +40,6 @@ services:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
-    depends_on:
-      doppler-env:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

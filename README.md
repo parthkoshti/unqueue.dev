@@ -98,7 +98,7 @@ Two compose files:
 
 Deploy infra and app as separate Dokploy compose stacks (or environments). Point `DATABASE_URL` at PgBouncer (`pgbouncer:5432` in-network, port `6432` externally) and `REDIS_URL` at `redis:6379`.
 
-**Infra stack (Doppler):** upload `.env.infra.example` to a Doppler config, create a service token, set `DOPPLER_TOKEN` in Dokploy, deploy `docker-compose.infra.yml`. A `doppler-env` init container downloads secrets before Postgres/PgBouncer start.
+**Infra stack:** set env vars from `.env.infra.example` in Dokploy compose environment.
 
 **App stack:** secrets in Doppler; run with `doppler run -- docker compose up` (see `pnpm compose:up`). Connection URLs (`DATABASE_URL`, `REDIS_URL`): `.env.example`.
 

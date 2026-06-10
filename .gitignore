@@ -6,7 +6,6 @@ dist
 !.env.example
 !.env.infra.example
 doppler.env
-.doppler-env
 *.log
 .DS_Store
 coverage
