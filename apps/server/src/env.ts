@@ -9,7 +9,9 @@ const envSchema = z.object({
   API_URL: z.string().url(),
   ENCRYPTION_KEYS: z.string(),
   PORT: z.string().default("3001"),
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   COOKIE_DOMAIN: z.string().optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.string().optional(),

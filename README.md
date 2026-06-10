@@ -127,10 +127,10 @@ Paste a URL in the connection form to pre-fill host, port, username, password, D
 
 Two compose files:
 
-| File | Services |
-|------|----------|
+| File                       | Services                   |
+| -------------------------- | -------------------------- |
 | `docker-compose.infra.yml` | Postgres, PgBouncer, Redis |
-| `docker-compose.yml` | Server, Platform |
+| `docker-compose.yml`       | Server, Platform           |
 
 Deploy infra and app as separate Dokploy compose stacks (or environments). Point `DATABASE_URL` at PgBouncer (`pgbouncer:5432` in-network, port `6432` externally) and `REDIS_URL` at `redis://:REDIS_PASSWORD@redis:6379`.
 
