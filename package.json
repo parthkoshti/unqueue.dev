@@ -12,6 +12,7 @@
     "test": "turbo run test",
     "db:generate": "doppler run -- turbo run db:generate --filter=@unqueue/db",
     "db:migrate": "doppler run -- turbo run db:migrate --filter=@unqueue/db",
+    "db:migrate:prod": "doppler run --config prd -- turbo run db:migrate --filter=@unqueue/db",
     "demo-worker": "doppler run -- pnpm --filter @unqueue/demo-worker dev",
     "compose:up": "doppler run -- docker compose up",
     "compose:up:build": "doppler run -- docker compose up --build"

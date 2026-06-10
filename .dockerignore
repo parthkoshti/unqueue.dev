@@ -3,6 +3,9 @@ node_modules
 .turbo
 **/.turbo
 **/dist
+out
+**/*.tsbuildinfo
+coverage
 .env
 .env.*
 !.env.example
