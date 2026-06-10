@@ -1,0 +1,9 @@
+{
+  "extends": "@unstall/config/typescript/node",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["src/**/*"]
+}

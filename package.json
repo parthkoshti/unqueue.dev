@@ -1,0 +1,32 @@
+{
+  "name": "unstall",
+  "private": true,
+  "scripts": {
+    "doppler:setup": "doppler setup",
+    "doppler:secrets": "doppler secrets",
+    "dev": "doppler run -- turbo run dev --filter=@unstall/platform --filter=@unstall/server",
+    "dev:packages": "doppler run -- turbo run dev --filter='./packages/*'",
+    "build": "doppler run -- turbo run build",
+    "start": "doppler run -- turbo run start --filter=@unstall/server",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "doppler run -- turbo run db:generate --filter=@unstall/db",
+    "db:migrate": "doppler run -- turbo run db:migrate --filter=@unstall/db",
+    "demo-worker": "doppler run -- pnpm --filter @unstall/demo-worker dev",
+    "compose:up": "doppler run -- docker compose up",
+    "compose:up:build": "doppler run -- docker compose up --build"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@10.12.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "^5.11.1"
+    }
+  }
+}

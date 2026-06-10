@@ -1,0 +1,34 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    ports:
+      - "${PORT:-3001}:${PORT:-3001}"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      PLATFORM_URL: ${PLATFORM_URL}
+      API_URL: ${API_URL}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      ENCRYPTION_KEYS: ${ENCRYPTION_KEYS}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@unstall.dev}
+      PORT: ${PORT:-3001}
+      NODE_ENV: ${NODE_ENV:-production}
+
+  platform:
+    build:
+      context: .
+      dockerfile: apps/platform/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+    ports:
+      - "5173:80"
+    depends_on:
+      - server

@@ -1,0 +1,25 @@
+{
+  "name": "@unstall/logger",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "pino": "^9.7.0",
+    "pino-pretty": "^13.0.0"
+  },
+  "devDependencies": {
+    "@unstall/config": "workspace:*",
+    "@types/node": "^24.0.3",
+    "typescript": "^5.8.3"
+  }
+}

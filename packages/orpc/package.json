@@ -1,0 +1,54 @@
+{
+  "name": "@unstall/orpc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./router": {
+      "types": "./dist/router.d.ts",
+      "default": "./dist/router.js"
+    },
+    "./middleware": {
+      "types": "./dist/middleware.d.ts",
+      "default": "./dist/middleware.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "default": "./dist/errors.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@orpc/client": "^1.6.6",
+    "@orpc/server": "^1.6.6",
+    "@orpc/tanstack-query": "^1.6.6",
+    "@tanstack/react-query": "^5.81.5",
+    "@unstall/db": "workspace:*",
+    "@unstall/logger": "workspace:*",
+    "@unstall/shared": "workspace:*",
+    "@unstall/validators": "workspace:*",
+    "drizzle-orm": "^0.44.2",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@unstall/config": "workspace:*",
+    "@types/node": "^24.0.3",
+    "@types/react": "^19.1.8",
+    "react": "^19.1.0",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

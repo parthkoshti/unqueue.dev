@@ -1,0 +1,10 @@
+{
+  "extends": "@unstall/config/typescript/react",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

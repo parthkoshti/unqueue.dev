@@ -1,0 +1,29 @@
+{
+  "name": "@unstall/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@unstall/db": "workspace:*",
+    "@unstall/shared": "workspace:*",
+    "better-auth": "^1.2.12",
+    "drizzle-orm": "^0.44.2",
+    "nodemailer": "^7.0.3"
+  },
+  "devDependencies": {
+    "@unstall/config": "workspace:*",
+    "@types/node": "^24.0.3",
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "^5.8.3"
+  }
+}

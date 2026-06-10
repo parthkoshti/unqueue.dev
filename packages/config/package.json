@@ -1,0 +1,10 @@
+{
+  "name": "@unstall/config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./typescript/base": "./typescript/base.json",
+    "./typescript/react": "./typescript/react.json",
+    "./typescript/node": "./typescript/node.json"
+  }
+}

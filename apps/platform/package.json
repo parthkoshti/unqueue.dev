@@ -1,0 +1,42 @@
+{
+  "name": "@unstall/platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/client": "^1.6.6",
+    "@orpc/tanstack-query": "^1.6.6",
+    "@tanstack/react-form": "^1.12.4",
+    "@tanstack/react-query": "^5.81.5",
+    "@tanstack/react-router": "^1.121.34",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.12",
+    "@unstall/orpc": "workspace:*",
+    "@unstall/server": "workspace:*",
+    "@unstall/ui": "workspace:*",
+    "better-auth": "^1.2.12",
+    "lucide-react": "^0.525.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-resizable-panels": "^3.0.3",
+    "socket.io-client": "^4.8.1",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@tanstack/router-plugin": "^1.121.34",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@unstall/config": "workspace:*",
+    "@vitejs/plugin-react": "^4.6.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}
