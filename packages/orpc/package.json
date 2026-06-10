@@ -31,22 +31,22 @@
   },
   "dependencies": {
     "@orpc/client": "^1.14.5",
-    "@orpc/server": "^1.14.5",
+    "@orpc/server": "1.14.5",
     "@orpc/tanstack-query": "^1.14.5",
-    "@tanstack/react-query": "^5.81.5",
+    "@tanstack/react-query": "^5.100.14",
     "@unqueue/db": "workspace:*",
     "@unqueue/logger": "workspace:*",
     "@unqueue/shared": "workspace:*",
     "@unqueue/validators": "workspace:*",
-    "drizzle-orm": "^0.44.2",
-    "zod": "^3.25.67"
+    "drizzle-orm": "^0.44.7",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@types/react": "^19.2.15",
     "@unqueue/config": "workspace:*",
-    "@types/node": "^24.0.3",
-    "@types/react": "^19.1.8",
-    "react": "^19.1.0",
-    "typescript": "^5.8.3"
+    "react": "^19.2.6",
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "react": "^19.0.0"

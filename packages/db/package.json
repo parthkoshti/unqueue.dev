@@ -21,13 +21,13 @@
   },
   "dependencies": {
     "@unqueue/shared": "workspace:*",
-    "drizzle-orm": "^0.44.2",
-    "postgres": "^3.4.7"
+    "drizzle-orm": "^0.44.7",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
+    "@types/node": "^24.12.4",
     "@unqueue/config": "workspace:*",
-    "@types/node": "^24.0.3",
-    "drizzle-kit": "^0.31.1",
-    "typescript": "^5.8.3"
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5.9.3"
   }
 }

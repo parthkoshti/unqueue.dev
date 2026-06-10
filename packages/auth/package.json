@@ -16,14 +16,14 @@
   "dependencies": {
     "@unqueue/db": "workspace:*",
     "@unqueue/shared": "workspace:*",
-    "better-auth": "^1.2.12",
-    "drizzle-orm": "^0.44.2",
-    "nodemailer": "^7.0.3"
+    "better-auth": "^1.6.11",
+    "drizzle-orm": "^0.44.7",
+    "nodemailer": "^7.0.13"
   },
   "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@types/nodemailer": "^6.4.23",
     "@unqueue/config": "workspace:*",
-    "@types/node": "^24.0.3",
-    "@types/nodemailer": "^6.4.17",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   }
 }

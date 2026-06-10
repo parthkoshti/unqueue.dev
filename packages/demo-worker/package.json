@@ -7,12 +7,12 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "bullmq": "^5.56.0",
-    "ioredis": "^5.6.1"
+    "bullmq": "^5.77.6",
+    "ioredis": "^5.11.1"
   },
   "devDependencies": {
-    "@types/node": "^24.0.3",
-    "tsx": "^4.20.3",
-    "typescript": "^5.8.3"
+    "@types/node": "^24.12.4",
+    "tsx": "^4.22.3",
+    "typescript": "^5.9.3"
   }
 }

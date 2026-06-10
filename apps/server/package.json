@@ -16,9 +16,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hono/node-server": "^1.14.4",
+    "@hono/node-server": "^1.19.14",
     "@orpc/experimental-pino": "^1.14.5",
-    "@orpc/server": "^1.14.5",
+    "@orpc/server": "1.14.5",
     "@unqueue/auth": "workspace:*",
     "@unqueue/bullmq": "workspace:*",
     "@unqueue/db": "workspace:*",
@@ -28,18 +28,18 @@
     "@unqueue/services": "workspace:*",
     "@unqueue/shared": "workspace:*",
     "@unqueue/validators": "workspace:*",
-    "better-auth": "^1.2.12",
-    "bullmq": "^5.56.0",
-    "drizzle-orm": "^0.44.2",
-    "hono": "^4.8.3",
-    "socket.io": "^4.8.1",
-    "zod": "^3.25.67"
+    "better-auth": "^1.6.11",
+    "bullmq": "^5.77.6",
+    "drizzle-orm": "^0.44.7",
+    "hono": "^4.12.23",
+    "socket.io": "^4.8.3",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^24.0.3",
+    "@types/node": "^24.12.4",
     "@unqueue/config": "workspace:*",
-    "tsx": "^4.20.3",
-    "typescript": "^5.8.3",
+    "tsx": "^4.22.3",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
 }

@@ -15,12 +15,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "ioredis": "^5.6.1"
+    "ioredis": "^5.11.1"
   },
   "devDependencies": {
+    "@types/node": "^24.12.4",
     "@unqueue/config": "workspace:*",
-    "@types/node": "^24.0.3",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
 }

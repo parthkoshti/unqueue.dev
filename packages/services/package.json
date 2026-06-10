@@ -21,12 +21,12 @@
     "@unqueue/redis": "workspace:*",
     "@unqueue/shared": "workspace:*",
     "@unqueue/validators": "workspace:*",
-    "drizzle-orm": "^0.44.2"
+    "drizzle-orm": "^0.44.7"
   },
   "devDependencies": {
+    "@types/node": "^24.12.4",
     "@unqueue/config": "workspace:*",
-    "@types/node": "^24.0.3",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
 }
