@@ -22,7 +22,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@unstall/ui/components/card";
+} from "@unqueue/ui/components/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function formatCount(value: number) {

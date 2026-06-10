@@ -14,7 +14,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
-  const { workspaceId, environmentId, hasNavigationContext } = useShellContext();
+  const { workspaceId, environmentId, hasNavigationContext } =
+    useShellContext();
 
   return (
     <ShellLayoutProvider>
@@ -27,8 +28,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <TooltipProvider>
           <SidebarProvider>
-            <AppSidebar workspaceId={workspaceId} environmentId={environmentId} />
-            <SidebarInset className="flex h-svh flex-col">
+            <AppSidebar
+              workspaceId={workspaceId}
+              environmentId={environmentId}
+            />
+            <SidebarInset className="flex h-svh flex-col overflow-hidden overscroll-none">
               <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
                 <SidebarTrigger className="-ml-1" />
                 <PageBreadcrumbs />
@@ -38,7 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
                 )}
               </header>
-              <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <main className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-y-none">
                 {children}
               </main>
             </SidebarInset>

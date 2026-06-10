@@ -1,4 +1,4 @@
-import type { alerts } from "@unstall/db/schema";
+import type { alerts } from "@unqueue/db/schema";
 
 export type AlertRow = typeof alerts.$inferSelect;
 

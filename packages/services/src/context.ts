@@ -1,5 +1,5 @@
-import type { Database } from "@unstall/db";
-import type { Logger } from "@unstall/logger";
+import type { Database } from "@unqueue/db";
+import type { Logger } from "@unqueue/logger";
 import type { EncryptionService } from "./encryption.js";
 import type { AlertScheduler } from "./ports/alerts.js";
 import type { RealtimeGateway } from "./ports/realtime.js";

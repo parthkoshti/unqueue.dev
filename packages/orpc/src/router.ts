@@ -1,7 +1,7 @@
 import { os } from "@orpc/server";
 import { z } from "zod";
-import { createId, ROLES } from "@unstall/shared";
-import { alertConditionSchema, redisInstanceInputSchema } from "@unstall/validators";
+import { createId, ROLES } from "@unqueue/shared";
+import { alertConditionSchema, redisInstanceInputSchema } from "@unqueue/validators";
 import { authed, requireRole } from "./middleware.js";
 import { forbidden, notFound } from "./errors.js";
 import type { ORPCContext } from "./context.js";
@@ -13,7 +13,7 @@ export const workspaceRouter = {
     .use(authed)
     .handler(async ({ context }) => {
       const { db, user } = context;
-      const { workspaceMembers, workspaces } = await import("@unstall/db/schema");
+      const { workspaceMembers, workspaces } = await import("@unqueue/db/schema");
       const { eq } = await import("drizzle-orm");
 
       const rows = await db
@@ -35,7 +35,7 @@ export const workspaceRouter = {
     .use(authed)
     .handler(async ({ context, input }) => {
       const { db } = context;
-      const { workspaces } = await import("@unstall/db/schema");
+      const { workspaces } = await import("@unqueue/db/schema");
       const { eq } = await import("drizzle-orm");
 
       const [workspace] = await db
@@ -54,7 +54,7 @@ export const workspaceRouter = {
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
       const { db } = context;
-      const { workspaces } = await import("@unstall/db/schema");
+      const { workspaces } = await import("@unqueue/db/schema");
       const { eq } = await import("drizzle-orm");
 
       await db
@@ -72,7 +72,7 @@ export const membersRouter = {
     .use(authed)
     .handler(async ({ context, input }) => {
       const { db } = context;
-      const { users, workspaceMembers } = await import("@unstall/db/schema");
+      const { users, workspaceMembers } = await import("@unqueue/db/schema");
       const { eq } = await import("drizzle-orm");
 
       return db
@@ -101,7 +101,7 @@ export const membersRouter = {
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
       const { db, user } = context;
-      const { workspaceInvites } = await import("@unstall/db/schema");
+      const { workspaceInvites } = await import("@unqueue/db/schema");
       const { createHash, randomBytes } = await import("node:crypto");
 
       const token = randomBytes(32).toString("hex");
@@ -131,7 +131,7 @@ export const environmentRouter = {
     .use(authed)
     .handler(async ({ context, input }) => {
       const { db } = context;
-      const { environments } = await import("@unstall/db/schema");
+      const { environments } = await import("@unqueue/db/schema");
       const { eq } = await import("drizzle-orm");
 
       return db
@@ -151,7 +151,7 @@ export const environmentRouter = {
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
       const { db } = context;
-      const { environments } = await import("@unstall/db/schema");
+      const { environments } = await import("@unqueue/db/schema");
       const id = createId();
 
       await db.insert(environments).values({

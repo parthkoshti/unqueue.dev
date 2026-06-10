@@ -1,8 +1,8 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
-import { createId, type Role } from "@unstall/shared";
-import { users, workspaceInvites, workspaceMembers } from "@unstall/db/schema";
-import type { Logger } from "@unstall/logger";
+import { createId, type Role } from "@unqueue/shared";
+import { users, workspaceInvites, workspaceMembers } from "@unqueue/db/schema";
+import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
 import type { Actor } from "../types.js";
 import { forbidden, notFound } from "../errors.js";

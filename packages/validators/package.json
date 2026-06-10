@@ -1,5 +1,5 @@
 {
-  "name": "@unstall/validators",
+  "name": "@unqueue/validators",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@unstall/config": "workspace:*",
+    "@unqueue/config": "workspace:*",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }

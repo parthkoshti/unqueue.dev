@@ -13,7 +13,7 @@ import { z } from "zod";
 import { rpcClient } from "@/lib/api";
 import { sessionQueryOptions } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
-import { Badge } from "@unstall/ui/components/badge";
+import { Badge } from "@unqueue/ui/components/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,10 +37,11 @@ import {
   formatDuration,
   formatJobTimestamp,
 } from "@/lib/format-timestamp";
+import { formatJobAttemptsValue } from "@/lib/format-job-attempts";
 import type {
   JobBookmarkSnapshot,
   JobBookmarkTargetRef,
-} from "@unstall/shared";
+} from "@unqueue/shared";
 
 function DetailRow({
   label,
@@ -161,8 +162,7 @@ function SnapshotContent({
               <JobStatusChip state={job.state} />
             </DetailRow>
             <DetailRow label="Attempts" mono>
-              {job.attemptsMade}
-              {maxAttempts != null ? ` / ${maxAttempts}` : ""}
+              {formatJobAttemptsValue(job.attemptsMade, maxAttempts)}
             </DetailRow>
             <DetailRow label="Priority" mono>
               {job.priority ?? job.opts?.priority ?? "—"}

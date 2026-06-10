@@ -5,8 +5,8 @@ import {
   getJobState,
   listJobs,
   type JobListState,
-} from "@unstall/bullmq";
-import type { Logger } from "@unstall/logger";
+} from "@unqueue/bullmq";
+import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
 import { notFound } from "../errors.js";
 import { assertRedisInstanceAccess } from "../rbac.js";

@@ -2,9 +2,9 @@ import {
   createId,
   DEFAULT_ENVIRONMENT_NAME,
   DEFAULT_ENVIRONMENT_NAMES,
-} from "@unstall/shared";
-import type { Database } from "@unstall/db";
-import { environments, workspaceMembers, workspaces } from "@unstall/db/schema";
+} from "@unqueue/shared";
+import type { Database } from "@unqueue/db";
+import { environments, workspaceMembers, workspaces } from "@unqueue/db/schema";
 
 export async function bootstrapWorkspace(
   db: Database,

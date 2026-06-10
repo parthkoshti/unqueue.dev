@@ -2,7 +2,7 @@ import { Job } from "bullmq";
 import type { RedisConnection } from "./redis-types.js";
 import { withQueue } from "./queue-runner.js";
 import type { QueuePoolContext } from "./queue-pool-context.js";
-import { jobLogSchema } from "@unstall/validators";
+import { jobLogSchema } from "@unqueue/validators";
 import type { JobSummary, QueueCounts, QueueMeta } from "./types.js";
 
 export async function getQueueMeta(
@@ -118,14 +118,24 @@ export async function listJobs(
         const nonEmptyStates = JOB_STATES.filter((s) => (counts[s] ?? 0) > 0);
         if (nonEmptyStates.length === 0) return [];
 
-        const perStateCap = end + 1;
+        const pageSize = end - start + 1;
+        const perStateCap = start + pageSize;
         const batches = await Promise.all(
-          nonEmptyStates.map((jobState) =>
-            queue.getJobs([jobState], 0, perStateCap, false),
-          ),
+          nonEmptyStates.map(async (jobState) => {
+            const jobs = await queue.getJobs([jobState], 0, perStateCap, false);
+            return toJobSummaries(jobs, jobState);
+          }),
         );
-        const merged = await toJobSummaries(batches.flat());
-        return merged.slice(start, end + 1);
+        const seen = new Set<string>();
+        const merged = batches
+          .flat()
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .filter((job) => {
+            if (seen.has(job.id)) return false;
+            seen.add(job.id);
+            return true;
+          });
+        return merged.slice(start, start + pageSize);
       }
 
       const jobs = await queue.getJobs([state], start, end, false);

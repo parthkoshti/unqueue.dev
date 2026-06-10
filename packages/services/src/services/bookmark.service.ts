@@ -3,20 +3,20 @@ import {
   getJobPayload,
   getJobProgress,
   getJobState,
-} from "@unstall/bullmq";
+} from "@unqueue/bullmq";
 import { and, count, desc, eq, or } from "drizzle-orm";
 import {
   bookmarkFolders,
   bookmarkNotes,
   bookmarks,
   users,
-} from "@unstall/db/schema";
-import type { Logger } from "@unstall/logger";
+} from "@unqueue/db/schema";
+import type { Logger } from "@unqueue/logger";
 import {
   createId,
   type JobBookmarkSnapshot,
   type JobBookmarkTargetRef,
-} from "@unstall/shared";
+} from "@unqueue/shared";
 import type { ServiceDeps } from "../context.js";
 import { forbidden, notFound } from "../errors.js";
 import { assertRedisInstanceAccess, assertWorkspaceAccess } from "../rbac.js";

@@ -1,6 +1,6 @@
 import { os } from "@orpc/server";
-import type { Role } from "@unstall/shared";
-import { hasMinimumRole } from "@unstall/shared";
+import type { Role } from "@unqueue/shared";
+import { hasMinimumRole } from "@unqueue/shared";
 import type { ORPCContext } from "./context.js";
 import { forbidden, unauthorized } from "./errors.js";
 

@@ -8,6 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SwitcherSkeleton } from "@/components/app-sidebar-skeleton";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -35,6 +36,10 @@ export function EnvironmentSwitcher({
 
   const environments = environmentsQuery.data ?? [];
   const activeEnvironment = environments.find((e) => e.id === environmentId);
+
+  if (environmentsQuery.isPending) {
+    return <SwitcherSkeleton />;
+  }
 
   if (!activeEnvironment) {
     return null;

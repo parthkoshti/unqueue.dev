@@ -10,7 +10,7 @@ import {
   subscribeRooms,
   unsubscribeRooms,
 } from "@/lib/socket";
-import { Badge } from "@unstall/ui/components/badge";
+import { Badge } from "@unqueue/ui/components/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -30,6 +30,7 @@ import {
   formatDuration,
   formatJobTimestamp,
 } from "@/lib/format-timestamp";
+import { formatJobAttemptsValue } from "@/lib/format-job-attempts";
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -336,8 +337,7 @@ export function JobDetailPanel({
                     <JobStatusChip state={job.state} />
                   </DetailRow>
                   <DetailRow label="Attempts" mono>
-                    {job.attemptsMade}
-                    {maxAttempts != null ? ` / ${maxAttempts}` : ""}
+                    {formatJobAttemptsValue(job.attemptsMade, maxAttempts)}
                   </DetailRow>
                   <DetailRow label="Priority" mono>
                     {job.priority ?? job.opts?.priority ?? "—"}

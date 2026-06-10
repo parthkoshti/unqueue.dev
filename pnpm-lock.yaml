@@ -44,16 +44,16 @@ importers:
       '@tanstack/react-virtual':
         specifier: ^3.13.12
         version: 3.14.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@unstall/orpc':
+      '@unqueue/orpc':
         specifier: workspace:*
         version: link:../../packages/orpc
-      '@unstall/server':
+      '@unqueue/server':
         specifier: workspace:*
         version: link:../server
-      '@unstall/shared':
+      '@unqueue/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@unstall/ui':
+      '@unqueue/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       better-auth:
@@ -114,7 +114,7 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.6
         version: 19.2.3(@types/react@19.2.17)
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@vitejs/plugin-react':
@@ -144,31 +144,31 @@ importers:
       '@orpc/server':
         specifier: ^1.6.6
         version: 1.14.5(ws@8.20.1)
-      '@unstall/auth':
+      '@unqueue/auth':
         specifier: workspace:*
         version: link:../../packages/auth
-      '@unstall/bullmq':
+      '@unqueue/bullmq':
         specifier: workspace:*
         version: link:../../packages/bullmq
-      '@unstall/db':
+      '@unqueue/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@unstall/logger':
+      '@unqueue/logger':
         specifier: workspace:*
         version: link:../../packages/logger
-      '@unstall/orpc':
+      '@unqueue/orpc':
         specifier: workspace:*
         version: link:../../packages/orpc
-      '@unstall/redis':
+      '@unqueue/redis':
         specifier: workspace:*
         version: link:../../packages/redis
-      '@unstall/services':
+      '@unqueue/services':
         specifier: workspace:*
         version: link:../../packages/services
-      '@unstall/shared':
+      '@unqueue/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@unstall/validators':
+      '@unqueue/validators':
         specifier: workspace:*
         version: link:../../packages/validators
       better-auth:
@@ -193,7 +193,7 @@ importers:
       '@types/node':
         specifier: ^24.0.3
         version: 24.13.1
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../../packages/config
       tsx:
@@ -208,10 +208,10 @@ importers:
 
   packages/auth:
     dependencies:
-      '@unstall/db':
+      '@unqueue/db':
         specifier: workspace:*
         version: link:../db
-      '@unstall/shared':
+      '@unqueue/shared':
         specifier: workspace:*
         version: link:../shared
       better-auth:
@@ -230,7 +230,7 @@ importers:
       '@types/nodemailer':
         specifier: ^6.4.17
         version: 6.4.23
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -239,10 +239,10 @@ importers:
 
   packages/bullmq:
     dependencies:
-      '@unstall/redis':
+      '@unqueue/redis':
         specifier: workspace:*
         version: link:../redis
-      '@unstall/validators':
+      '@unqueue/validators':
         specifier: workspace:*
         version: link:../validators
       bullmq:
@@ -255,7 +255,7 @@ importers:
       '@types/node':
         specifier: ^24.0.3
         version: 24.13.1
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -269,7 +269,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@unstall/shared':
+      '@unqueue/shared':
         specifier: workspace:*
         version: link:../shared
       drizzle-orm:
@@ -282,7 +282,7 @@ importers:
       '@types/node':
         specifier: ^24.0.3
         version: 24.13.1
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       drizzle-kit:
@@ -323,7 +323,7 @@ importers:
       '@types/node':
         specifier: ^24.0.3
         version: 24.13.1
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -344,16 +344,16 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.81.5
         version: 5.101.0(react@19.2.7)
-      '@unstall/db':
+      '@unqueue/db':
         specifier: workspace:*
         version: link:../db
-      '@unstall/logger':
+      '@unqueue/logger':
         specifier: workspace:*
         version: link:../logger
-      '@unstall/shared':
+      '@unqueue/shared':
         specifier: workspace:*
         version: link:../shared
-      '@unstall/validators':
+      '@unqueue/validators':
         specifier: workspace:*
         version: link:../validators
       drizzle-orm:
@@ -369,7 +369,7 @@ importers:
       '@types/react':
         specifier: ^19.1.8
         version: 19.2.17
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       react:
@@ -388,7 +388,7 @@ importers:
       '@types/node':
         specifier: ^24.0.3
         version: 24.13.1
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -400,22 +400,22 @@ importers:
 
   packages/services:
     dependencies:
-      '@unstall/bullmq':
+      '@unqueue/bullmq':
         specifier: workspace:*
         version: link:../bullmq
-      '@unstall/db':
+      '@unqueue/db':
         specifier: workspace:*
         version: link:../db
-      '@unstall/logger':
+      '@unqueue/logger':
         specifier: workspace:*
         version: link:../logger
-      '@unstall/redis':
+      '@unqueue/redis':
         specifier: workspace:*
         version: link:../redis
-      '@unstall/shared':
+      '@unqueue/shared':
         specifier: workspace:*
         version: link:../shared
-      '@unstall/validators':
+      '@unqueue/validators':
         specifier: workspace:*
         version: link:../validators
       drizzle-orm:
@@ -425,7 +425,7 @@ importers:
       '@types/node':
         specifier: ^24.0.3
         version: 24.13.1
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -444,7 +444,7 @@ importers:
       '@types/node':
         specifier: ^24.0.3
         version: 24.13.1
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -505,7 +505,7 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.6
         version: 19.2.3(@types/react@19.2.17)
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       react:
@@ -521,7 +521,7 @@ importers:
         specifier: ^3.25.67
         version: 3.25.76
     devDependencies:
-      '@unstall/config':
+      '@unqueue/config':
         specifier: workspace:*
         version: link:../config
       typescript:

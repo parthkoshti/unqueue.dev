@@ -1,5 +1,5 @@
 {
-  "name": "@unstall/auth",
+  "name": "@unqueue/auth",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,14 +14,14 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@unstall/db": "workspace:*",
-    "@unstall/shared": "workspace:*",
+    "@unqueue/db": "workspace:*",
+    "@unqueue/shared": "workspace:*",
     "better-auth": "^1.2.12",
     "drizzle-orm": "^0.44.2",
     "nodemailer": "^7.0.3"
   },
   "devDependencies": {
-    "@unstall/config": "workspace:*",
+    "@unqueue/config": "workspace:*",
     "@types/node": "^24.0.3",
     "@types/nodemailer": "^6.4.17",
     "typescript": "^5.8.3"

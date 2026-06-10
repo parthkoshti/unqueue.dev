@@ -1,6 +1,6 @@
 export type Theme = "light" | "dark";
 
-const STORAGE_KEY = "unstall-theme";
+const STORAGE_KEY = "unqueue-theme";
 
 export function getStoredTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY);

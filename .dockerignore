@@ -1,0 +1,12 @@
+node_modules
+.git
+.turbo
+**/.turbo
+**/dist
+.env
+.env.*
+!.env.example
+!.env.infra.example
+*.md
+.cursor
+.vscode

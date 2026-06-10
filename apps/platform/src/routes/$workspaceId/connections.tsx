@@ -11,7 +11,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@unstall/ui/components/card";
+} from "@unqueue/ui/components/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
@@ -341,7 +341,7 @@ function ConnectionsPage() {
                 <div className="space-y-1">
                   <p className="text-sm font-medium">No connections</p>
                   <p className="max-w-sm text-xs text-muted-foreground">
-                    Connect the Redis instance your BullMQ workers use. Unstall
+                    Connect the Redis instance your BullMQ workers use. Unqueue
                     will discover queues and stream job metrics in real time.
                   </p>
                 </div>

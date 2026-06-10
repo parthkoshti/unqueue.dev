@@ -6,7 +6,7 @@ export type DiscoveryCache = {
   invalidate(redisInstanceId: string): Promise<void>;
 };
 
-const DISCOVERY_KEY_PREFIX = "unstall:discovery:";
+const DISCOVERY_KEY_PREFIX = "unqueue:discovery:";
 export const DISCOVERY_CACHE_TTL_SEC = 604_800; // 7 days
 
 function discoveryKey(redisInstanceId: string): string {

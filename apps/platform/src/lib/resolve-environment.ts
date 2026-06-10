@@ -1,4 +1,4 @@
-import { DEFAULT_ENVIRONMENT_NAME } from "@unstall/shared";
+import { DEFAULT_ENVIRONMENT_NAME } from "@unqueue/shared";
 import { getPreferredEnvironmentId } from "@/lib/preferences";
 
 type EnvironmentRef = {

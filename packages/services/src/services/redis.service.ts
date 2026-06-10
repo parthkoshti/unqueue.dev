@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
-import type { RedisInstanceConfig } from "@unstall/bullmq";
-import { createId } from "@unstall/shared";
-import type { EncryptedEnvelope } from "@unstall/shared";
-import { environments, redisInstances } from "@unstall/db/schema";
-import type { Logger } from "@unstall/logger";
-import { testRedisConnection } from "@unstall/redis";
+import type { RedisInstanceConfig } from "@unqueue/bullmq";
+import { createId } from "@unqueue/shared";
+import type { EncryptedEnvelope } from "@unqueue/shared";
+import { environments, redisInstances } from "@unqueue/db/schema";
+import type { Logger } from "@unqueue/logger";
+import { testRedisConnection } from "@unqueue/redis";
 import type { ServiceDeps } from "../context.js";
 import {
   assertEnvironmentAccess,

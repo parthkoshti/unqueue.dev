@@ -2,7 +2,7 @@ import {
   createRedisConnection,
   type RedisConnectionConfig,
   type RedisHealthStatus,
-} from "@unstall/redis";
+} from "@unqueue/redis";
 import type { RedisConnection } from "./redis-types.js";
 import type { RedisInstanceConfig } from "./types.js";
 

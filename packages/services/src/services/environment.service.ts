@@ -2,9 +2,9 @@ import { eq } from "drizzle-orm";
 import {
   createId,
   DEFAULT_ENVIRONMENT_NAMES,
-} from "@unstall/shared";
-import { environments } from "@unstall/db/schema";
-import type { Logger } from "@unstall/logger";
+} from "@unqueue/shared";
+import { environments } from "@unqueue/db/schema";
+import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
 
 const ENVIRONMENT_SORT_ORDER = new Map(

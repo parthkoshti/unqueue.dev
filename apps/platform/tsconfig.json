@@ -1,5 +1,5 @@
 {
-  "extends": "@unstall/config/typescript/react",
+  "extends": "@unqueue/config/typescript/react",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

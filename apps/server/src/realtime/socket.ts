@@ -1,9 +1,9 @@
 import type { Server as HttpServer } from "node:http";
 import { Server } from "socket.io";
-import type { Auth } from "@unstall/auth";
-import type { Database } from "@unstall/db";
-import type { Logger } from "@unstall/logger";
-import { workspaceMembers } from "@unstall/db/schema";
+import type { Auth } from "@unqueue/auth";
+import type { Database } from "@unqueue/db";
+import type { Logger } from "@unqueue/logger";
+import { workspaceMembers } from "@unqueue/db/schema";
 import { eq } from "drizzle-orm";
 import type { RealtimeManager } from "./manager.js";
 

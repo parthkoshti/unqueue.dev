@@ -3,7 +3,7 @@ RUN corepack enable
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
 COPY apps/server/package.json ./apps/server/
 COPY packages/*/package.json ./packages/
 RUN pnpm install --frozen-lockfile || pnpm install
@@ -11,8 +11,8 @@ RUN pnpm install --frozen-lockfile || pnpm install
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN pnpm install
-RUN pnpm --filter @unstall/server... build
+RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm turbo run build --filter=@unqueue/server
 
 FROM base AS runner
 ENV NODE_ENV=production

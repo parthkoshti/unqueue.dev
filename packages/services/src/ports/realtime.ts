@@ -5,7 +5,7 @@ import type {
   RedisConnection,
   RedisInstanceConfig,
   WindowKey,
-} from "@unstall/bullmq";
+} from "@unqueue/bullmq";
 
 export type RealtimeGateway = {
   getQueues(redisInstanceId: string): string[];

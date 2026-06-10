@@ -106,3 +106,98 @@ export function parseRedisDiscoveryRoom(room: string): string | null {
   if (!room.startsWith("redis:")) return null;
   return room.slice("redis:".length) || null;
 }
+
+export type LatestJobSummary = {
+  id: string;
+  name: string;
+  state: string;
+  timestamp: number;
+  processedOn?: number;
+  finishedOn?: number;
+  attemptsMade: number;
+  delay?: number;
+  opts?: {
+    attempts?: number;
+  };
+};
+
+type JobsInfiniteData = {
+  pages: LatestJobSummary[][];
+  pageParams: number[];
+};
+
+function latestJobsQueryKey(redisInstanceId: string, queueName: string) {
+  return ["jobs", redisInstanceId, queueName, "latest"] as const;
+}
+
+function mergeLatestJob(
+  existing: LatestJobSummary,
+  incoming: LatestJobSummary,
+): LatestJobSummary {
+  return {
+    ...existing,
+    ...incoming,
+    name: incoming.name || existing.name,
+    timestamp: incoming.timestamp || existing.timestamp,
+    processedOn: incoming.processedOn ?? existing.processedOn,
+    finishedOn: incoming.finishedOn ?? existing.finishedOn,
+    delay: incoming.delay ?? existing.delay,
+    opts: incoming.opts ?? existing.opts,
+  };
+}
+
+export function applyLatestJobUpdate(
+  queryClient: QueryClient,
+  redisInstanceId: string,
+  queueName: string,
+  job: LatestJobSummary,
+): void {
+  queryClient.setQueryData<JobsInfiniteData>(
+    latestJobsQueryKey(redisInstanceId, queueName),
+    (old) => {
+      if (!old?.pages.length) {
+        return {
+          pages: [[job]],
+          pageParams: [0],
+        };
+      }
+
+      let found = false;
+      const pages = old.pages.map((page) =>
+        page.map((existing) => {
+          if (existing.id === job.id) {
+            found = true;
+            return mergeLatestJob(existing, job);
+          }
+          return existing;
+        }),
+      );
+
+      if (found) {
+        return { ...old, pages };
+      }
+
+      const nextPages = [...pages];
+      nextPages[0] = [job, ...(nextPages[0] ?? [])];
+      return { ...old, pages: nextPages };
+    },
+  );
+}
+
+export function applyLatestJobRemoved(
+  queryClient: QueryClient,
+  redisInstanceId: string,
+  queueName: string,
+  jobId: string,
+): void {
+  queryClient.setQueryData<JobsInfiniteData>(
+    latestJobsQueryKey(redisInstanceId, queueName),
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => page.filter((job) => job.id !== jobId)),
+      };
+    },
+  );
+}

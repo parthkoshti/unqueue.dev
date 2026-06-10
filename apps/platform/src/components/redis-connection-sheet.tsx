@@ -6,7 +6,7 @@ import { rpcClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RevealableInput } from "@/components/ui/revealable-input";
-import { Label } from "@unstall/ui/components/label";
+import { Label } from "@unqueue/ui/components/label";
 import {
   Collapsible,
   CollapsibleContent,

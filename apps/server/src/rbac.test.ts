@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasMinimumRole } from "@unstall/shared";
+import { hasMinimumRole } from "@unqueue/shared";
 
 describe("RBAC", () => {
   it("owner has admin access", () => {

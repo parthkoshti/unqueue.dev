@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { workspaceMembers, workspaces } from "@unstall/db/schema";
-import type { Logger } from "@unstall/logger";
+import { workspaceMembers, workspaces } from "@unqueue/db/schema";
+import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
 import { notFound } from "../errors.js";
 import type { Actor } from "../types.js";

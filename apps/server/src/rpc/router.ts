@@ -1,11 +1,11 @@
 import { os } from "@orpc/server";
 import { z } from "zod";
-import { ROLES } from "@unstall/shared";
+import { ROLES } from "@unqueue/shared";
 import {
   alertConditionSchema,
   redisInstanceInputSchema,
-} from "@unstall/validators";
-import type { Actor } from "@unstall/services";
+} from "@unqueue/validators";
+import type { Actor } from "@unqueue/services";
 import { authed, requireRole, rpcLogging, serviceErrors } from "./middleware.js";
 import type { ServerContext } from "./context.js";
 

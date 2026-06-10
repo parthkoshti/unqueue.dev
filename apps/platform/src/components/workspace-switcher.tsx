@@ -8,6 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SwitcherSkeleton } from "@/components/app-sidebar-skeleton";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -28,6 +29,10 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId: string }) {
 
   const workspaces = workspacesQuery.data ?? [];
   const activeWorkspace = workspaces.find((w) => w.id === workspaceId);
+
+  if (workspacesQuery.isPending) {
+    return <SwitcherSkeleton />;
+  }
 
   if (!activeWorkspace) {
     return null;

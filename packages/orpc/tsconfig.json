@@ -1,5 +1,5 @@
 {
-  "extends": "@unstall/config/typescript/node",
+  "extends": "@unqueue/config/typescript/node",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",

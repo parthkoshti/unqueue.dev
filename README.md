@@ -1,4 +1,4 @@
-# Unstall
+# Unqueue
 
 Realtime operational dashboard for BullMQ. AGPL-3.0 licensed.
 
@@ -31,7 +31,7 @@ brew install dopplerhq/cli/doppler   # macOS
 doppler login
 ```
 
-2. Link the repo (creates project `unstall` / config `dev` if needed):
+2. Link the repo (creates project `unqueue` / config `dev` if needed):
 
 ```bash
 pnpm doppler:setup
@@ -89,7 +89,7 @@ Then add your BullMQ Redis instance in Settings.
 
 ## Connecting your Redis
 
-Unstall connects to **your** Redis instances (separate from the app's own `REDIS_URL`). Each registered instance uses **two persistent connections**: one for queue reads and admin actions, and one for BullMQ `QueueEvents` realtime subscriptions.
+Unqueue connects to **your** Redis instances (separate from the app's own `REDIS_URL`). Each registered instance uses **two persistent connections**: one for queue reads and admin actions, and one for BullMQ `QueueEvents` realtime subscriptions.
 
 ### Recommended setup
 
@@ -111,8 +111,8 @@ Unstall connects to **your** Redis instances (separate from the app's own `REDIS
 Example Redis 7 ACL (adjust key patterns to your prefix):
 
 ```
-ACL SETUSER unstall-read on >your-password ~bull:* &* +@read +ping +info +psubscribe +subscribe
-ACL SETUSER unstall-admin on >your-password ~bull:* &* +@read +@write +@pubsub +ping +info
+ACL SETUSER unqueue-read on >your-password ~bull:* &* +@read +ping +info +psubscribe +subscribe
+ACL SETUSER unqueue-admin on >your-password ~bull:* &* +@read +@write +@pubsub +ping +info
 ```
 
 ### Connection URL format
@@ -160,4 +160,4 @@ Unit tests do not require Doppler. Commands that touch the database (`db:migrate
 
 ## License
 
-AGPL-3.0 - see [LICENSE](LICENSE). Hosted official instance: https://app.unstall.dev
+AGPL-3.0 - see [LICENSE](LICENSE). Hosted official instance: https://app.unqueue.dev

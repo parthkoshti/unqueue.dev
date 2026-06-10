@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
-import { createId } from "@unstall/shared";
-import { workspaceInvites, workspaceMembers } from "@unstall/db/schema";
-import type { Logger } from "@unstall/logger";
+import { createId } from "@unqueue/shared";
+import { workspaceInvites, workspaceMembers } from "@unqueue/db/schema";
+import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
 import { forbidden, notFound } from "../errors.js";
 

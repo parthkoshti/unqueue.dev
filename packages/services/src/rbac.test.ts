@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Database } from "@unstall/db";
+import type { Database } from "@unqueue/db";
 import {
   assertEnvironmentAccess,
   assertRedisInstanceAccess,

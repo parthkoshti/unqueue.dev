@@ -1,5 +1,5 @@
 import { LoggingHandlerPlugin } from "@orpc/experimental-pino";
-import type { Logger } from "@unstall/logger";
+import type { Logger } from "@unqueue/logger";
 
 const isDev = process.env.NODE_ENV !== "production";
 

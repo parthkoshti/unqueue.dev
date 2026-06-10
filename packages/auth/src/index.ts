@@ -1,8 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createId } from "@unstall/shared";
-import type { Database } from "@unstall/db";
-import * as schema from "@unstall/db/schema";
+import { createId } from "@unqueue/shared";
+import type { Database } from "@unqueue/db";
+import * as schema from "@unqueue/db/schema";
 import { createMailer } from "./mailer.js";
 import { bootstrapWorkspace } from "./hooks.js";
 
@@ -18,7 +18,7 @@ export function createAuth(options: CreateAuthOptions) {
   const mailer = createMailer();
 
   return betterAuth({
-    appName: "Unstall",
+    appName: "Unqueue",
     baseURL: options.baseURL,
     secret: options.secret,
     database: drizzleAdapter(options.db, {
@@ -45,7 +45,7 @@ export function createAuth(options: CreateAuthOptions) {
       sendResetPassword: async ({ user, url }) => {
         await mailer.send({
           to: user.email,
-          subject: "Reset your Unstall password",
+          subject: "Reset your Unqueue password",
           html: `<p>Click <a href="${url}">here</a> to reset your password.</p>`,
         });
       },
@@ -54,7 +54,7 @@ export function createAuth(options: CreateAuthOptions) {
       sendVerificationEmail: async ({ user, url }) => {
         await mailer.send({
           to: user.email,
-          subject: "Verify your Unstall email",
+          subject: "Verify your Unqueue email",
           html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`,
         });
       },

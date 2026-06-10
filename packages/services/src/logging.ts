@@ -1,4 +1,4 @@
-import type { Logger } from "@unstall/logger";
+import type { Logger } from "@unqueue/logger";
 
 export function createServiceLogger(
   logger: Logger,

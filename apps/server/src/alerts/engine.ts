@@ -1,13 +1,13 @@
 import { and, desc, eq } from "drizzle-orm";
-import type { Database } from "@unstall/db";
-import { alertEvents, alerts } from "@unstall/db/schema";
-import type { AlertCondition } from "@unstall/validators";
+import type { Database } from "@unqueue/db";
+import { alertEvents, alerts } from "@unqueue/db/schema";
+import type { AlertCondition } from "@unqueue/validators";
 import { evaluateCondition } from "./conditions.js";
-import { createId } from "@unstall/shared";
-import type { Logger } from "@unstall/logger";
-import type { MetricsAggregator } from "@unstall/bullmq";
-import { createEncryptionService, type EncryptionService } from "@unstall/services";
-import type { EncryptedEnvelope } from "@unstall/shared";
+import { createId } from "@unqueue/shared";
+import type { Logger } from "@unqueue/logger";
+import type { MetricsAggregator } from "@unqueue/bullmq";
+import { createEncryptionService, type EncryptionService } from "@unqueue/services";
+import type { EncryptedEnvelope } from "@unqueue/shared";
 
 type AlertRow = typeof alerts.$inferSelect;
 

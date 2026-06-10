@@ -17,7 +17,7 @@ export function createMailer() {
   return {
     async send(options: { to: string; subject: string; html: string }) {
       await transport.sendMail({
-        from: process.env.SMTP_FROM ?? "noreply@unstall.dev",
+        from: process.env.SMTP_FROM ?? "noreply@unqueue.dev",
         to: options.to,
         subject: options.subject,
         html: options.html,

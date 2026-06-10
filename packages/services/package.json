@@ -1,5 +1,5 @@
 {
-  "name": "@unstall/services",
+  "name": "@unqueue/services",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,16 +15,16 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@unstall/bullmq": "workspace:*",
-    "@unstall/db": "workspace:*",
-    "@unstall/logger": "workspace:*",
-    "@unstall/redis": "workspace:*",
-    "@unstall/shared": "workspace:*",
-    "@unstall/validators": "workspace:*",
+    "@unqueue/bullmq": "workspace:*",
+    "@unqueue/db": "workspace:*",
+    "@unqueue/logger": "workspace:*",
+    "@unqueue/redis": "workspace:*",
+    "@unqueue/shared": "workspace:*",
+    "@unqueue/validators": "workspace:*",
     "drizzle-orm": "^0.44.2"
   },
   "devDependencies": {
-    "@unstall/config": "workspace:*",
+    "@unqueue/config": "workspace:*",
     "@types/node": "^24.0.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

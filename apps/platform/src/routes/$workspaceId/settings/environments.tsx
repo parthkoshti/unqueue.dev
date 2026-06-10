@@ -4,18 +4,18 @@ import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { PlusIcon, RefreshCwIcon, ServerIcon } from "lucide-react";
 import { z } from "zod";
-import { DEFAULT_ENVIRONMENT_NAMES } from "@unstall/shared";
+import { DEFAULT_ENVIRONMENT_NAMES } from "@unqueue/shared";
 import { rpcClient } from "@/lib/api";
 import { getPreferredEnvironmentId } from "@/lib/preferences";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@unstall/ui/components/label";
-import { Badge } from "@unstall/ui/components/badge";
+import { Label } from "@unqueue/ui/components/label";
+import { Badge } from "@unqueue/ui/components/badge";
 import {
   Card,
   CardContent,
-} from "@unstall/ui/components/card";
+} from "@unqueue/ui/components/card";
 import {
   Sheet,
   SheetContent,

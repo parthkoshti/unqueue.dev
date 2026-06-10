@@ -6,18 +6,19 @@ import {
   type RedisConnection,
   discoverQueues,
   diffQueues,
+  getJobState,
   getQueueMeta,
   getQueueMetaBatch,
   MetricsAggregator,
   QueuePool,
   type JobSummary,
   type RedisInstanceConfig,
-} from "@unstall/bullmq";
-import type { Logger } from "@unstall/logger";
+} from "@unqueue/bullmq";
+import type { Logger } from "@unqueue/logger";
 import {
   DISCOVERY_CACHE_TTL_SEC,
   type DiscoveryCache,
-} from "@unstall/redis";
+} from "@unqueue/redis";
 import type { Server as SocketServer } from "socket.io";
 
 type RoomEvent = {
@@ -527,17 +528,50 @@ export class RealtimeManager {
     args: Record<string, unknown>,
     state: string,
   ): void {
-    const queueName = String(args.queueName ?? args.name ?? "");
+    const queueName = String(args.queueName ?? "");
     const jobId = String(args.jobId ?? "");
     if (!queueName || !jobId) return;
 
-    const job: JobSummary = {
+    void this.emitJobUpdate(redisId, queueName, jobId, state, {
+      name: typeof args.name === "string" ? args.name : undefined,
+      attemptsMade:
+        typeof args.attemptsMade === "number" ? args.attemptsMade : undefined,
+      delay: typeof args.delay === "number" ? args.delay : undefined,
+    });
+  }
+
+  private async emitJobUpdate(
+    redisId: string,
+    queueName: string,
+    jobId: string,
+    state: string,
+    hints: Partial<JobSummary> = {},
+  ): Promise<void> {
+    let job: JobSummary = {
       id: jobId,
-      name: String(args.name ?? ""),
+      name: hints.name ?? "",
       state,
-      timestamp: Date.now(),
-      attemptsMade: Number(args.attemptsMade ?? 0),
+      timestamp: hints.timestamp ?? Date.now(),
+      attemptsMade: hints.attemptsMade ?? 0,
+      delay: hints.delay,
     };
+
+    try {
+      const { connection, prefix } = this.getConnection(redisId);
+      const full = await getJobState(connection, queueName, prefix, jobId);
+      if (full) {
+        job = {
+          ...full,
+          state: full.state || state,
+          name: full.name || hints.name || job.name,
+        };
+      }
+    } catch (error) {
+      this.logger.debug(
+        { error, redisId, queueName, jobId },
+        "Failed to fetch job for realtime update",
+      );
+    }
 
     this.emit(`queue:${redisId}:${queueName}`, "job:update", { job });
     this.emit(`job:${redisId}:${queueName}:${jobId}`, "job:update", { job });
@@ -547,7 +581,6 @@ export class RealtimeManager {
   private onCompleted(redisId: string, args: Record<string, unknown>): void {
     const queueName = String(args.queueName ?? "");
     const jobId = String(args.jobId ?? "");
-    const returnvalue = args.returnvalue;
 
     let runtimeMs = 0;
     if (
@@ -558,7 +591,7 @@ export class RealtimeManager {
     }
 
     this.metrics.recordCompletion(redisId, queueName, runtimeMs, true);
-    this.onJobEvent(redisId, { ...args, name: returnvalue }, "completed");
+    this.onJobEvent(redisId, args, "completed");
   }
 
   private onFailed(redisId: string, args: Record<string, unknown>): void {

@@ -1,18 +1,18 @@
 {
-  "name": "unstall",
+  "name": "unqueue",
   "private": true,
   "scripts": {
     "doppler:setup": "doppler setup",
     "doppler:secrets": "doppler secrets",
-    "dev": "doppler run -- turbo run dev --filter=@unstall/platform --filter=@unstall/server --filter=@unstall/bullmq --filter=@unstall/services",
+    "dev": "doppler run -- turbo run dev --filter=@unqueue/platform --filter=@unqueue/server --filter=@unqueue/bullmq --filter=@unqueue/services",
     "dev:packages": "doppler run -- turbo run dev --filter='./packages/*'",
     "build": "doppler run -- turbo run build",
-    "start": "doppler run -- turbo run start --filter=@unstall/server",
+    "start": "doppler run -- turbo run start --filter=@unqueue/server",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "db:generate": "doppler run -- turbo run db:generate --filter=@unstall/db",
-    "db:migrate": "doppler run -- turbo run db:migrate --filter=@unstall/db",
-    "demo-worker": "doppler run -- pnpm --filter @unstall/demo-worker dev",
+    "db:generate": "doppler run -- turbo run db:generate --filter=@unqueue/db",
+    "db:migrate": "doppler run -- turbo run db:migrate --filter=@unqueue/db",
+    "demo-worker": "doppler run -- pnpm --filter @unqueue/demo-worker dev",
     "compose:up": "doppler run -- docker compose up",
     "compose:up:build": "doppler run -- docker compose up --build"
   },
@@ -27,6 +27,10 @@
   "pnpm": {
     "overrides": {
       "ioredis": "^5.11.1"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract"
+    ]
   }
 }

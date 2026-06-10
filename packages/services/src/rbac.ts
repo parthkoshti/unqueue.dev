@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
-import type { Database } from "@unstall/db";
-import { environments, redisInstances, workspaceMembers } from "@unstall/db/schema";
-import type { Role } from "@unstall/shared";
-import { hasMinimumRole } from "@unstall/shared";
+import type { Database } from "@unqueue/db";
+import { environments, redisInstances, workspaceMembers } from "@unqueue/db/schema";
+import type { Role } from "@unqueue/shared";
+import { hasMinimumRole } from "@unqueue/shared";
 import { forbidden, notFound } from "./errors.js";
 
 export async function getMembership(

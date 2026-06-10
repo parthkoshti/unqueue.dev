@@ -1,3 +1,14 @@
+import {
+  CheckIcon,
+  ClockIcon,
+  CrownIcon,
+  GitBranchIcon,
+  Loader2Icon,
+  PauseCircleIcon,
+  TimerIcon,
+  XIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_CHIP_CLASS: Record<string, string> = {
@@ -19,6 +30,18 @@ const STATUS_CHIP_CLASS: Record<string, string> = {
     "bg-cyan-500/15 text-cyan-700 ring-1 ring-inset ring-cyan-500/25 dark:text-cyan-300",
 };
 
+const STATUS_CHIP_ICON: Record<string, LucideIcon> = {
+  waiting: ClockIcon,
+  delayed: TimerIcon,
+  completed: CheckIcon,
+  failed: XIcon,
+  paused: PauseCircleIcon,
+  prioritized: CrownIcon,
+  "waiting-children": GitBranchIcon,
+};
+
+const iconClassName = "size-3 shrink-0 opacity-80";
+
 export function JobStatusChip({
   state,
   label,
@@ -26,14 +49,24 @@ export function JobStatusChip({
   state: string;
   label?: string;
 }) {
+  const Icon = STATUS_CHIP_ICON[state];
+
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize",
         STATUS_CHIP_CLASS[state] ??
           "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
       )}
     >
+      {state === "active" ? (
+        <Loader2Icon
+          className={cn(iconClassName, "animate-spin")}
+          aria-hidden
+        />
+      ) : Icon ? (
+        <Icon className={iconClassName} aria-hidden />
+      ) : null}
       {label ?? state}
     </span>
   );

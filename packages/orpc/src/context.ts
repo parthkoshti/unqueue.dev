@@ -1,6 +1,6 @@
-import type { Database } from "@unstall/db";
-import type { Logger } from "@unstall/logger";
-import type { Role } from "@unstall/shared";
+import type { Database } from "@unqueue/db";
+import type { Logger } from "@unqueue/logger";
+import type { Role } from "@unqueue/shared";
 
 export type SessionUser = {
   id: string;

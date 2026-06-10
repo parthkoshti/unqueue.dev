@@ -22,7 +22,7 @@ describe("createRedisConnection", () => {
     createRedisConnection({
       host: "redis.example.com",
       port: 6380,
-      username: "unstall",
+      username: "unqueue",
       password: "secret",
       db: 2,
       tls: true,
@@ -32,7 +32,7 @@ describe("createRedisConnection", () => {
     expect(instances[0]).toMatchObject({
       host: "redis.example.com",
       port: 6380,
-      username: "unstall",
+      username: "unqueue",
       password: "secret",
       db: 2,
       tls: { servername: "custom.redis.example.com" },

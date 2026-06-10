@@ -10,6 +10,7 @@ import {
   environmentRedisQueryOptions,
 } from "@/lib/environment-queues-query";
 import { useEnvironmentQueueSync } from "@/hooks/use-environment-queue-sync";
+import { NavQueuesSkeleton } from "@/components/app-sidebar-skeleton";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -17,7 +18,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSkeleton,
 } from "@/components/ui/sidebar";
 
 const MAX_VISIBLE_QUEUES = 15;
@@ -147,11 +147,15 @@ export function NavQueues({
   const pausedCount = queues.filter((queue) => queue.isPaused).length;
   const healthyCount = queues.length - pausedCount;
 
+  if (isLoading) {
+    return <NavQueuesSkeleton />;
+  }
+
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel className="flex items-center justify-between gap-2">
         <span>Queues</span>
-        {!isLoading && queues.length > 0 && (
+        {queues.length > 0 && (
           <Link
             to="/$workspaceId/$environmentId"
             params={{ workspaceId, environmentId }}
@@ -194,7 +198,7 @@ export function NavQueues({
       </SidebarGroupLabel>
 
       <SidebarGroupContent>
-        {!isLoading && queues.length > 0 && (
+        {queues.length > 0 && (
           <div className="relative mb-1 px-2">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-4 size-3 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -207,13 +211,7 @@ export function NavQueues({
         )}
 
         <SidebarMenu>
-          {isLoading ? (
-            Array.from({ length: 5 }, (_, i) => (
-              <SidebarMenuItem key={i}>
-                <SidebarMenuSkeleton showIcon />
-              </SidebarMenuItem>
-            ))
-          ) : queues.length === 0 ? (
+          {queues.length === 0 ? (
             <SidebarMenuItem>
               <span className="px-2 py-1.5 text-xs text-sidebar-foreground/50">
                 No queues found

@@ -15,12 +15,12 @@ import { sessionQueryOptions } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@unstall/ui/components/label";
-import { Badge } from "@unstall/ui/components/badge";
+import { Label } from "@unqueue/ui/components/label";
+import { Badge } from "@unqueue/ui/components/badge";
 import {
   Card,
   CardContent,
-} from "@unstall/ui/components/card";
+} from "@unqueue/ui/components/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BookmarkSnapshotPanel } from "@/components/bookmark-snapshot-panel";
 import { JobStatusChip } from "@/components/job-status-chip";
 import { formatJobTimestamp } from "@/lib/format-timestamp";
-import type { JobBookmarkSnapshot, JobBookmarkTargetRef } from "@unstall/shared";
+import type { JobBookmarkSnapshot, JobBookmarkTargetRef } from "@unqueue/shared";
 import { LucideCheckbox } from "@/components/lucide-checkbox";
 
 const searchSchema = z.object({

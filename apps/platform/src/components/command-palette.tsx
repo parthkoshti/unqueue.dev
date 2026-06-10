@@ -8,7 +8,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@unstall/ui/components/command";
+} from "@unqueue/ui/components/command";
 import { environmentQueuesQueryOptions } from "@/lib/environment-queues-query";
 
 export function CommandPalette({

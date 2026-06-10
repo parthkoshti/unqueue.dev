@@ -1,4 +1,4 @@
-const PREFERRED_ENV_PREFIX = "unstall-preferred-env";
+const PREFERRED_ENV_PREFIX = "unqueue-preferred-env";
 
 function preferredEnvKey(workspaceId: string) {
   return `${PREFERRED_ENV_PREFIX}:${workspaceId}`;

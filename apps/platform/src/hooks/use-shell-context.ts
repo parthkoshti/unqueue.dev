@@ -5,7 +5,7 @@ import { rpcClient, setWorkspaceId } from "@/lib/api";
 import { parseRouteParamsFromPathname } from "@/lib/parse-route-params";
 import { resolveEnvironmentId } from "@/lib/resolve-environment";
 import { sessionQueryOptions } from "@/lib/session-query";
-import type { Role } from "@unstall/shared";
+import type { Role } from "@unqueue/shared";
 
 export function useShellContext() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });

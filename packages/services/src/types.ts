@@ -1,4 +1,4 @@
-import type { Role } from "@unstall/shared";
+import type { Role } from "@unqueue/shared";
 
 export type Actor = {
   userId: string;

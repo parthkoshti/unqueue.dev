@@ -6,14 +6,18 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
-  InboxIcon,
   RefreshCwIcon,
   RotateCcwIcon,
   Trash2Icon,
 } from "lucide-react";
 import { z } from "zod";
 import { rpcClient } from "@/lib/api";
-import { applyQueueCountsPatch } from "@/lib/queue-cache-updates";
+import {
+  applyLatestJobRemoved,
+  applyLatestJobUpdate,
+  applyQueueCountsPatch,
+  type LatestJobSummary,
+} from "@/lib/queue-cache-updates";
 import { useShellContext } from "@/hooks/use-shell-context";
 import {
   onResync,
@@ -22,13 +26,17 @@ import {
   unsubscribeRooms,
 } from "@/lib/socket";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@unstall/ui/components/scroll-area";
 import { JobDetailPanel } from "@/components/job-detail-panel";
-import { QueueJobsTable } from "@/components/queue-jobs-table";
-import { QueueJobsTableSkeleton } from "@/components/queue-page-skeleton";
+import {
+  QueueJobsTable,
+  QueueJobsTableSkeleton,
+  QUEUE_TABLE_SKELETON_ROWS,
+} from "@/components/queue-jobs-table";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { RoutePending } from "@/lib/route-pending";
 import {
+  getQueueTabJobCount,
+  getQueueTabEmptyState,
   type QueueJobFilterState,
   QueueMetricsPanel,
   QueuePageHeader,
@@ -36,9 +44,10 @@ import {
 } from "@/components/queue-page-toolbar";
 
 const PAGE_SIZE = 100;
-const SKELETON_ROWS = 12;
+const LOAD_MORE_MIN_THRESHOLD_PX = 600;
 
 const jobFilterStates = [
+  "latest",
   "completed",
   "failed",
   "active",
@@ -54,8 +63,8 @@ const searchSchema = z.object({
   redisInstanceId: z.string(),
   state: z
     .union([z.enum(jobFilterStates), z.literal("all")])
-    .transform((value) => (value === "all" ? "active" : value))
-    .default("active"),
+    .transform((value) => (value === "all" ? "latest" : value))
+    .default("latest"),
   jobId: z.string().optional(),
 });
 
@@ -67,32 +76,14 @@ export const Route = createFileRoute(
   component: QueuePage,
 });
 
-function getStateCount(
-  counts:
-    | {
-        waiting: number;
-        active: number;
-        delayed: number;
-        completed: number;
-        failed: number;
-        paused: number;
-        prioritized: number;
-        "waiting-children": number;
-        schedulers: number;
-      }
-    | undefined,
-  state: QueueJobFilterState,
-) {
-  if (!counts) return 0;
-  return counts[state] ?? 0;
-}
-
 function QueuePage() {
   const { workspaceId, environmentId, queueName } = Route.useParams();
   const { redisInstanceId, state, jobId: jobIdFromSearch } = Route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isFetchingNextPageRef = useRef(false);
+  const hasNextPageRef = useRef(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [metricsWindow, setMetricsWindow] = useState<
     "1m" | "1h" | "24h" | "7d"
@@ -133,7 +124,7 @@ function QueuePage() {
     enabled: !!queueMetaQuery.data,
   });
 
-  const stateCount = getStateCount(queueMetaQuery.data?.counts, state);
+  const stateCount = getQueueTabJobCount(queueMetaQuery.data?.counts, state);
   const isPaused = queueMetaQuery.data?.isPaused ?? false;
 
   const jobsQuery = useInfiniteQuery({
@@ -142,7 +133,7 @@ function QueuePage() {
       rpcClient.job.list({
         redisInstanceId,
         queueName,
-        state,
+        state: state === "latest" ? "all" : state,
         start: pageParam * PAGE_SIZE,
         end: pageParam * PAGE_SIZE + PAGE_SIZE - 1,
       }),
@@ -160,10 +151,37 @@ function QueuePage() {
 
     const offEvent = onSocketEvent((data) => {
       if (data.room !== room) return;
-      if (data.type === "job:update" || data.type === "job:removed") {
-        void queryClient.invalidateQueries({
-          queryKey: ["jobs", redisInstanceId, queueName],
-        });
+      if (data.type === "job:update") {
+        const payload = data.payload as { job?: LatestJobSummary };
+        if (payload.job) {
+          applyLatestJobUpdate(
+            queryClient,
+            redisInstanceId,
+            queueName,
+            payload.job,
+          );
+        }
+        if (state !== "latest") {
+          void queryClient.invalidateQueries({
+            queryKey: ["jobs", redisInstanceId, queueName, state],
+          });
+        }
+      }
+      if (data.type === "job:removed") {
+        const payload = data.payload as { jobId?: string };
+        if (payload.jobId) {
+          applyLatestJobRemoved(
+            queryClient,
+            redisInstanceId,
+            queueName,
+            payload.jobId,
+          );
+        }
+        if (state !== "latest") {
+          void queryClient.invalidateQueries({
+            queryKey: ["jobs", redisInstanceId, queueName, state],
+          });
+        }
       }
       if (data.type === "queue:counts") {
         applyQueueCountsPatch(
@@ -200,7 +218,7 @@ function QueuePage() {
     const offResync = onResync((data) => {
       if (data.room === room) {
         void queryClient.invalidateQueries({
-          queryKey: ["jobs", redisInstanceId, queueName],
+          queryKey: ["jobs", redisInstanceId, queueName, state],
         });
         void queryClient.invalidateQueries({
           queryKey: ["queue-meta", redisInstanceId, queueName],
@@ -215,7 +233,7 @@ function QueuePage() {
       offResync();
       unsubscribeRooms([room]);
     };
-  }, [environmentId, redisInstanceId, queueName, queryClient]);
+  }, [environmentId, redisInstanceId, queueName, queryClient, state]);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -223,6 +241,15 @@ function QueuePage() {
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelected((prev) => {
+      const allSelected =
+        jobs.length > 0 && jobs.every((job) => prev.has(job.id));
+      if (allSelected) return new Set();
+      return new Set(jobs.map((job) => job.id));
     });
   };
 
@@ -252,9 +279,10 @@ function QueuePage() {
     void jobsQuery.refetch();
   };
 
-  const isLoadingJobs = queueMetaQuery.isLoading || jobsQuery.isLoading;
-  const isEmpty =
-    !isLoadingJobs && (state === "schedulers" || fetchedCount === 0);
+  const isLoadingJobs =
+    queueMetaQuery.isPending ||
+    (state !== "schedulers" && jobsQuery.isPending);
+  const isEmpty = !isLoadingJobs && fetchedCount === 0;
   const isFetching =
     queueMetaQuery.isFetching ||
     metricsQuery.isFetching ||
@@ -262,24 +290,56 @@ function QueuePage() {
 
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = jobsQuery;
 
+  isFetchingNextPageRef.current = isFetchingNextPage;
+  hasNextPageRef.current = hasNextPage;
+
+  const minJobsToLoad = Math.min(PAGE_SIZE, stateCount);
+
   useEffect(() => {
-    const sentinel = loadMoreRef.current;
-    if (!sentinel || !hasNextPage) return;
+    if (state === "schedulers" || isLoadingJobs || isFetchingNextPage) return;
+    if (!hasNextPage || fetchedCount >= minJobsToLoad) return;
+    void fetchNextPage();
+  }, [
+    state,
+    isLoadingJobs,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchedCount,
+    minJobsToLoad,
+    fetchNextPage,
+  ]);
 
-    const viewport = sentinel.closest("[data-radix-scroll-area-viewport]");
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || isLoadingJobs) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
-          void fetchNextPage();
-        }
-      },
-      { root: viewport, rootMargin: "200px" },
-    );
+    const maybeLoadMore = () => {
+      if (!hasNextPageRef.current || isFetchingNextPageRef.current) return;
+      const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+      const threshold = Math.max(
+        LOAD_MORE_MIN_THRESHOLD_PX,
+        el.clientHeight * 2,
+      );
+      if (remaining < threshold) {
+        void fetchNextPage();
+      }
+    };
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, fetchedCount]);
+    el.addEventListener("scroll", maybeLoadMore, { passive: true });
+
+    const resizeObserver = new ResizeObserver(maybeLoadMore);
+    resizeObserver.observe(el);
+    for (const child of el.children) {
+      resizeObserver.observe(child);
+    }
+
+    maybeLoadMore();
+
+    return () => {
+      el.removeEventListener("scroll", maybeLoadMore);
+      resizeObserver.disconnect();
+    };
+  }, [fetchNextPage, fetchedCount, state, isLoadingJobs]);
 
   const closeJobSheet = () => {
     setSheetJobId(undefined);
@@ -317,7 +377,7 @@ function QueuePage() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       <QueuePageHeader
         queueName={queueName}
         isPaused={isPaused}
@@ -364,38 +424,24 @@ function QueuePage() {
       )}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t bg-card">
-        <ScrollArea className="min-h-0 flex-1">
+        <div
+          ref={scrollRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-none"
+        >
           {isLoadingJobs ? (
-            <QueueJobsTableSkeleton rows={SKELETON_ROWS} />
-          ) : isEmpty ? (
-            <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
-              <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-                <InboxIcon className="size-4 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-medium">
-                {state === "schedulers"
-                  ? "No schedulers"
-                  : `No ${state.replace("-", " ")} jobs`}
-              </p>
-              <p className="max-w-xs text-xs text-muted-foreground">
-                {state === "schedulers"
-                  ? "Repeatable job schedulers will appear here when configured."
-                  : `There are no jobs in the ${state.replace("-", " ")} state right now.`}
-              </p>
-            </div>
+            <QueueJobsTableSkeleton rows={QUEUE_TABLE_SKELETON_ROWS} />
           ) : (
-            <>
-              <QueueJobsTable
-                jobs={jobs}
-                selected={selected}
-                activeJobId={sheetJobId}
-                onToggleSelect={toggleSelect}
-                onOpenJob={openJobSheet}
-              />
-              <div ref={loadMoreRef} className="h-px" aria-hidden />
-            </>
+            <QueueJobsTable
+              jobs={jobs}
+              selected={selected}
+              activeJobId={sheetJobId}
+              emptyState={isEmpty ? getQueueTabEmptyState(state) : undefined}
+              onToggleSelect={toggleSelect}
+              onToggleSelectAll={toggleSelectAll}
+              onOpenJob={openJobSheet}
+            />
           )}
-        </ScrollArea>
+        </div>
 
         {!isLoadingJobs && fetchedCount > 0 && state !== "schedulers" && (
           <div className="flex shrink-0 items-center justify-between border-t border-border bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">

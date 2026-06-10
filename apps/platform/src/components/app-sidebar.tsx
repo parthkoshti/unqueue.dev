@@ -38,7 +38,7 @@ export function AppSidebar({
               U
             </div>
             <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
-              Unstall
+              Unqueue
             </span>
           </Link>
         ) : (
@@ -50,7 +50,7 @@ export function AppSidebar({
               U
             </div>
             <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
-              Unstall
+              Unqueue
             </span>
           </Link>
         )}

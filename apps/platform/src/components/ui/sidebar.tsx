@@ -29,6 +29,65 @@ const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
+function getSidebarScrollContainer(root: HTMLElement) {
+  return root.querySelector('[data-sidebar="content"]') as HTMLElement | null
+}
+
+function handleSidebarWheelEvent(root: HTMLElement, event: WheelEvent) {
+  const content = getSidebarScrollContainer(root)
+
+  if (!content || content.scrollHeight <= content.clientHeight) {
+    event.preventDefault()
+    return
+  }
+
+  const delta = event.deltaY
+  const target = event.target as Node
+  const fromContent = content === target || content.contains(target)
+  const atTop = content.scrollTop <= 0
+  const atBottom =
+    content.scrollTop + content.clientHeight >= content.scrollHeight - 1
+
+  if (fromContent) {
+    if ((atTop && delta < 0) || (atBottom && delta > 0)) {
+      event.preventDefault()
+    }
+    return
+  }
+
+  content.scrollTop += delta
+  event.preventDefault()
+}
+
+function useSidebarScrollTrap(ref: React.RefObject<HTMLElement | null>) {
+  React.useEffect(() => {
+    const root = ref.current
+    if (!root) return
+
+    const onWheel = (event: WheelEvent) => {
+      handleSidebarWheelEvent(root, event)
+    }
+
+    root.addEventListener("wheel", onWheel, { passive: false })
+    return () => root.removeEventListener("wheel", onWheel)
+  }, [ref])
+}
+
+function SidebarScrollRoot({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"div">) {
+  const ref = React.useRef<HTMLDivElement>(null)
+  useSidebarScrollTrap(ref)
+
+  return (
+    <div ref={ref} className={className} {...props}>
+      {children}
+    </div>
+  )
+}
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
   open: boolean
@@ -163,16 +222,16 @@ function Sidebar({
 
   if (collapsible === "none") {
     return (
-      <div
+      <SidebarScrollRoot
         data-slot="sidebar"
         className={cn(
-          "flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
+          "flex h-full w-(--sidebar-width) flex-col overflow-hidden overscroll-y-none bg-sidebar text-sidebar-foreground",
           className
         )}
         {...props}
       >
         {children}
-      </div>
+      </SidebarScrollRoot>
     )
   }
 
@@ -196,7 +255,9 @@ function Sidebar({
             <SheetTitle>Sidebar</SheetTitle>
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <SidebarScrollRoot className="flex h-full w-full flex-col overflow-hidden overscroll-y-none">
+            {children}
+          </SidebarScrollRoot>
         </SheetContent>
       </Sheet>
     )
@@ -236,13 +297,13 @@ function Sidebar({
         )}
         {...props}
       >
-        <div
+        <SidebarScrollRoot
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          className="flex size-full flex-col overflow-hidden overscroll-y-none bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
         >
           {children}
-        </div>
+        </SidebarScrollRoot>
       </div>
     </div>
   )
@@ -368,7 +429,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "no-scrollbar flex min-h-0 flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "no-scrollbar flex min-h-0 flex-1 flex-col gap-0 overflow-auto overscroll-y-none group-data-[collapsible=icon]:overflow-hidden",
         className
       )}
       {...props}

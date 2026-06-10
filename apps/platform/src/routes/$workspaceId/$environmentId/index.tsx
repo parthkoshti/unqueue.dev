@@ -8,7 +8,7 @@ import {
   getAttentionQueues,
 } from "@/lib/aggregate-queue-stats";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@unstall/ui/components/scroll-area";
+import { ScrollArea } from "@unqueue/ui/components/scroll-area";
 import {
   EnvironmentQueuesTable,
 } from "@/components/environment-queues-table";
@@ -27,7 +27,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@unstall/ui/components/card";
+} from "@unqueue/ui/components/card";
 import { RoutePending } from "@/lib/route-pending";
 import { RedisConnectionSheet } from "@/components/redis-connection-sheet";
 import {

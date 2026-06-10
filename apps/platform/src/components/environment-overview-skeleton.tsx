@@ -7,7 +7,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@unstall/ui/components/card";
+} from "@unqueue/ui/components/card";
 
 const tdClass = "px-3 py-2";
 

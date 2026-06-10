@@ -61,7 +61,8 @@ export function formatJobTimestamp(ms?: number, now = Date.now()) {
   );
 
   if (daysAgo <= 0) {
-    if (elapsed < 60_000) return { label: "just now", title: formatAbsoluteTimestamp(ms) };
+    if (elapsed < 60_000)
+      return { label: "just now", title: formatAbsoluteTimestamp(ms) };
     if (elapsed < 3_600_000) {
       const minutes = Math.floor(elapsed / 60_000);
       return { label: `${minutes}m ago`, title: formatAbsoluteTimestamp(ms) };
@@ -85,8 +86,18 @@ export function formatJobTimestamp(ms?: number, now = Date.now()) {
   return { label, title: label };
 }
 
-function formatMsFraction(ms: number) {
-  return `${parseFloat((ms / 1000).toFixed(3))}s`;
+function formatSecondPart(ms: number, compound: boolean) {
+  const seconds = ms / 1000;
+
+  if (compound) {
+    return `${Math.round(seconds)}s`;
+  }
+
+  if (seconds >= 10) {
+    return `${parseFloat(seconds.toFixed(1))}s`;
+  }
+
+  return `${parseFloat(seconds.toFixed(3))}s`;
 }
 
 export function formatDuration(processedOn?: number, finishedOn?: number) {
@@ -94,20 +105,20 @@ export function formatDuration(processedOn?: number, finishedOn?: number) {
   const ms = finishedOn - processedOn;
   if (ms < 0) return "—";
   if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return formatMsFraction(ms);
+  if (ms < 60_000) return formatSecondPart(ms, false);
 
   const minutes = Math.floor(ms / 60_000);
   const remainderMs = ms % 60_000;
 
   if (ms < 3_600_000) {
-    return `${minutes}m ${formatMsFraction(remainderMs)}`;
+    return `${minutes}m ${formatSecondPart(remainderMs, true)}`;
   }
 
   const hours = Math.floor(ms / 3_600_000);
   const afterHoursMs = ms % 3_600_000;
   const mins = Math.floor(afterHoursMs / 60_000);
   const secsMs = afterHoursMs % 60_000;
-  return `${hours}h ${mins}m ${formatMsFraction(secsMs)}`;
+  return `${hours}h ${mins}m ${formatSecondPart(secsMs, true)}`;
 }
 
 export function formatDelay(ms?: number) {
@@ -116,4 +127,75 @@ export function formatDelay(ms?: number) {
   if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
   if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
   return `${(ms / 3_600_000).toFixed(1)}h`;
+}
+
+const TEN_HOURS_MS = 10 * 3_600_000;
+const DAY_MS = 86_400_000;
+const TEN_DAYS_MS = 10 * DAY_MS;
+
+export function formatElapsedMs(ms: number) {
+  if (ms < 0) return "—";
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60_000) return formatSecondPart(ms, false);
+
+  const minutes = Math.floor(ms / 60_000);
+  const remainderMs = ms % 60_000;
+
+  if (ms < 3_600_000) {
+    if (remainderMs < 1000) return `${minutes}m`;
+    return `${minutes}m ${formatSecondPart(remainderMs, true)}`;
+  }
+
+  if (ms >= TEN_DAYS_MS) {
+    return `${Math.floor(ms / DAY_MS)}d`;
+  }
+
+  if (ms >= DAY_MS) {
+    return `${parseFloat((ms / DAY_MS).toFixed(1))}d`;
+  }
+
+  if (ms >= TEN_HOURS_MS) {
+    return `${Math.floor(ms / 3_600_000)}h`;
+  }
+
+  const hours = Math.floor(ms / 3_600_000);
+  const afterHoursMs = ms % 3_600_000;
+  const mins = Math.floor(afterHoursMs / 60_000);
+  const secsMs = afterHoursMs % 60_000;
+  if (secsMs < 1000) return `${hours}h ${mins}m`;
+  return `${hours}h ${mins}m ${formatSecondPart(secsMs, true)}`;
+}
+
+export function formatStartDelayMs(ms: number) {
+  if (ms < 0) return "—";
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60_000) return formatSecondPart(ms, false);
+
+  const minutes = Math.floor(ms / 60_000);
+  const remainderMs = ms % 60_000;
+
+  if (ms < 3_600_000) {
+    if (ms < 600_000) {
+      if (remainderMs < 1000) return `${minutes}m`;
+      return `${minutes}m ${formatSecondPart(remainderMs, true)}`;
+    }
+    return `${minutes}m`;
+  }
+
+  if (ms >= TEN_DAYS_MS) {
+    return `${Math.floor(ms / DAY_MS)}d`;
+  }
+
+  if (ms >= DAY_MS) {
+    return `${parseFloat((ms / DAY_MS).toFixed(1))}d`;
+  }
+
+  if (ms >= TEN_HOURS_MS) {
+    return `${Math.floor(ms / 3_600_000)}h`;
+  }
+
+  const hours = Math.floor(ms / 3_600_000);
+  const mins = Math.floor((ms % 3_600_000) / 60_000);
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
 }

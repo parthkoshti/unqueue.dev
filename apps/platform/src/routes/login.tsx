@@ -2,10 +2,10 @@ import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-ro
 import { useForm } from "@tanstack/react-form";
 import { authClient } from "@/lib/auth";
 import { sessionQueryOptions } from "@/lib/session-query";
-import { Button } from "@unstall/ui/components/button";
-import { Input } from "@unstall/ui/components/input";
-import { Label } from "@unstall/ui/components/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@unstall/ui/components/card";
+import { Button } from "@unqueue/ui/components/button";
+import { Input } from "@unqueue/ui/components/input";
+import { Label } from "@unqueue/ui/components/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@unqueue/ui/components/card";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async ({ context }) => {
@@ -33,7 +33,7 @@ function LoginPage() {
     <div className="flex min-h-svh items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in to Unstall</CardTitle>
+          <CardTitle>Sign in to Unqueue</CardTitle>
         </CardHeader>
         <CardContent>
           <form

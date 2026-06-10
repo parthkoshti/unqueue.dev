@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
-import { createId } from "@unstall/shared";
-import type { AlertCondition } from "@unstall/validators";
-import { alertEvents, alerts } from "@unstall/db/schema";
-import type { Logger } from "@unstall/logger";
+import { createId } from "@unqueue/shared";
+import type { AlertCondition } from "@unqueue/validators";
+import { alertEvents, alerts } from "@unqueue/db/schema";
+import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
 import { forbidden } from "../errors.js";
 import {

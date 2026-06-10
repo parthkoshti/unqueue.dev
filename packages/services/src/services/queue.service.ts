@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
-import type { QueueMeta, WindowKey } from "@unstall/bullmq";
-import { redisInstances } from "@unstall/db/schema";
-import type { Logger } from "@unstall/logger";
+import type { QueueMeta, WindowKey } from "@unqueue/bullmq";
+import { redisInstances } from "@unqueue/db/schema";
+import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
 import {
   assertEnvironmentAccess,

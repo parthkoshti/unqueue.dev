@@ -4,8 +4,8 @@ import {
   parseEncryptionKeysFromEnv,
   reEncrypt,
   type EncryptionKey,
-} from "@unstall/shared/encryption";
-import type { EncryptedEnvelope } from "@unstall/shared";
+} from "@unqueue/shared/encryption";
+import type { EncryptedEnvelope } from "@unqueue/shared";
 
 export type EncryptionService = {
   encrypt(plaintext: string): EncryptedEnvelope;

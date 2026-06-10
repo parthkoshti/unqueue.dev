@@ -13,6 +13,7 @@ import {
   MoreHorizontalIcon,
   PauseCircleIcon,
   RefreshCwIcon,
+  HistoryIcon,
   TimerIcon,
   XCircleIcon,
   ZapIcon,
@@ -30,6 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type QueueJobFilterState =
+  | "latest"
   | "completed"
   | "failed"
   | "active"
@@ -45,6 +47,7 @@ export const QUEUE_STATE_TABS: Array<{
   label: string;
   icon: typeof CheckCircle2Icon;
 }> = [
+  { state: "latest", label: "Latest", icon: HistoryIcon },
   { state: "completed", label: "Completed", icon: CheckCircle2Icon },
   { state: "failed", label: "Failed", icon: XCircleIcon },
   { state: "active", label: "Active", icon: ZapIcon },
@@ -60,6 +63,29 @@ export const QUEUE_STATE_TABS: Array<{
   { state: "schedulers", label: "Schedulers", icon: CalendarIcon },
 ];
 
+const QUEUE_TAB_ACTIVE_CLASS: Record<QueueJobFilterState, string> = {
+  latest:
+    "data-active:border-foreground data-active:bg-muted/40 data-active:text-foreground group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--foreground)] dark:group-data-[variant=line]/tabs-list:data-active:border-foreground",
+  completed:
+    "data-active:border-emerald-500 data-active:bg-emerald-500/10 data-active:text-emerald-600 group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-emerald-500)] dark:data-active:text-emerald-400 dark:group-data-[variant=line]/tabs-list:data-active:border-emerald-500",
+  failed:
+    "data-active:border-destructive data-active:bg-destructive/10 data-active:text-destructive group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-destructive)] dark:group-data-[variant=line]/tabs-list:data-active:border-destructive",
+  active:
+    "data-active:border-blue-500 data-active:bg-blue-500/10 data-active:text-blue-600 group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-blue-500)] dark:data-active:text-blue-400 dark:group-data-[variant=line]/tabs-list:data-active:border-blue-500",
+  prioritized:
+    "data-active:border-violet-500 data-active:bg-violet-500/10 data-active:text-violet-600 group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-violet-500)] dark:data-active:text-violet-400 dark:group-data-[variant=line]/tabs-list:data-active:border-violet-500",
+  waiting:
+    "data-active:border-sky-500 data-active:bg-sky-500/10 data-active:text-sky-600 group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-sky-500)] dark:data-active:text-sky-400 dark:group-data-[variant=line]/tabs-list:data-active:border-sky-500",
+  "waiting-children":
+    "data-active:border-cyan-500 data-active:bg-cyan-500/10 data-active:text-cyan-600 group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-cyan-500)] dark:data-active:text-cyan-400 dark:group-data-[variant=line]/tabs-list:data-active:border-cyan-500",
+  delayed:
+    "data-active:border-amber-500 data-active:bg-amber-500/10 data-active:text-amber-600 group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-amber-500)] dark:data-active:text-amber-400 dark:group-data-[variant=line]/tabs-list:data-active:border-amber-500",
+  paused:
+    "data-active:border-orange-500 data-active:bg-orange-500/10 data-active:text-orange-600 group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-orange-500)] dark:data-active:text-orange-400 dark:group-data-[variant=line]/tabs-list:data-active:border-orange-500",
+  schedulers:
+    "data-active:border-violet-500 data-active:bg-violet-500/10 data-active:text-violet-600 group-data-[variant=line]/tabs-list:data-active:shadow-[inset_0_-4px_0_0_var(--color-violet-500)] dark:data-active:text-violet-400 dark:group-data-[variant=line]/tabs-list:data-active:border-violet-500",
+};
+
 export const METRICS_WINDOWS: Array<{ key: MetricsWindow; label: string }> = [
   { key: "1m", label: "Last minute" },
   { key: "1h", label: "Last hour" },
@@ -67,13 +93,54 @@ export const METRICS_WINDOWS: Array<{ key: MetricsWindow; label: string }> = [
   { key: "7d", label: "Last 7 days" },
 ];
 
-function getStateCount(counts: QueueCounts | undefined, state: QueueJobFilterState) {
+export function getLatestJobCount(counts: QueueCounts | undefined) {
   if (!counts) return 0;
+  return (
+    counts.waiting +
+    counts.active +
+    counts.delayed +
+    counts.completed +
+    counts.failed +
+    counts.paused +
+    counts.prioritized +
+    counts["waiting-children"]
+  );
+}
+
+export function getQueueTabJobCount(
+  counts: QueueCounts | undefined,
+  state: QueueJobFilterState,
+) {
+  if (!counts) return 0;
+  if (state === "latest") return getLatestJobCount(counts);
   return counts[state] ?? 0;
 }
 
+export function getQueueTabEmptyState(state: QueueJobFilterState) {
+  if (state === "schedulers") {
+    return {
+      title: "No schedulers",
+      description:
+        "Repeatable job schedulers will appear here when configured.",
+    };
+  }
+
+  if (state === "latest") {
+    return {
+      title: "No jobs yet",
+      description: "Jobs from all states appear here, newest first.",
+    };
+  }
+
+  const label = state.replace("-", " ");
+  return {
+    title: `No ${label} jobs`,
+    description: `There are no jobs in the ${label} state right now.`,
+  };
+}
+
 function formatRate(rate: number) {
-  return `${(rate * 100).toFixed(1)}%`;
+  return `${(rate * 100).toFixed(2)}%`;
 }
 
 function formatThroughput(value: number) {
@@ -108,7 +175,9 @@ export function QueuePageHeader({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onRefresh} disabled={isFetching}>
-            <RefreshCwIcon className={isFetching ? "animate-spin" : undefined} />
+            <RefreshCwIcon
+              className={isFetching ? "animate-spin" : undefined}
+            />
             Refresh
           </DropdownMenuItem>
           {canWrite && (
@@ -148,8 +217,8 @@ export function QueueMetricsPanel({
   const throughput = metrics?.throughputPerMinute ?? 0;
 
   return (
-    <div className="shrink-0 space-y-4 border-b px-4 py-4">
-      <div className="flex flex-wrap gap-1.5">
+    <div className="shrink-0 space-y-4 border-b py-4">
+      <div className="flex flex-wrap gap-1.5 px-4">
         {METRICS_WINDOWS.map((item) => (
           <button
             key={item.key}
@@ -167,7 +236,7 @@ export function QueueMetricsPanel({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+      <div className="grid w-full grid-cols-2 gap-0 sm:grid-cols-4">
         <MetricCard
           label="Success Rate"
           value={isLoading ? undefined : formatRate(successRate)}
@@ -190,9 +259,7 @@ export function QueueMetricsPanel({
         />
         <MetricCard
           label="Completed"
-          value={
-            isLoading ? undefined : completedInWindow.toLocaleString()
-          }
+          value={isLoading ? undefined : completedInWindow.toLocaleString()}
           sub={isLoading ? undefined : "in period"}
           isLoading={isLoading}
         />
@@ -219,19 +286,26 @@ function MetricCard({
   isLoading: boolean;
 }) {
   return (
-    <div className="min-w-0 space-y-1">
+    <div
+      className={cn(
+        "min-w-0 w-full space-y-1 border-t border-r border-b-0 border-border px-3 py-2.5",
+        "max-sm:odd:border-l sm:first:border-l",
+      )}
+    >
       <p className="text-[11px] text-muted-foreground">{label}</p>
       {isLoading ? (
         <Skeleton className="h-7 w-20" />
       ) : (
-        <p className="text-2xl font-semibold tracking-tight tabular-nums">
+        <p className="font-mono text-2xl font-semibold tracking-tight tabular-nums">
           {value}
         </p>
       )}
       {isLoading ? (
         <Skeleton className="h-3 w-16" />
       ) : (
-        <p className="text-[10px] text-muted-foreground tabular-nums">{sub}</p>
+        <p className="font-mono text-[10px] text-muted-foreground tabular-nums">
+          {sub}
+        </p>
       )}
     </div>
   );
@@ -257,11 +331,12 @@ export function QueueStateTabs({
       >
         <TabsList
           variant="line"
-          className="grid h-auto! w-full grid-cols-3 items-stretch gap-0 overflow-visible rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto! sm:grid-cols-5 xl:grid-cols-9"
+          className="grid h-auto! w-full grid-cols-3 items-stretch gap-0 overflow-visible rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto! sm:grid-cols-5 xl:grid-cols-10"
         >
           {QUEUE_STATE_TABS.map((tab) => {
             const Icon = tab.icon;
-            const count = getStateCount(counts, tab.state);
+            const count = getQueueTabJobCount(counts, tab.state);
+            const isActive = state === tab.state;
 
             return (
               <TabsTrigger
@@ -269,32 +344,34 @@ export function QueueStateTabs({
                 value={tab.state}
                 disabled={isLoading}
                 className={cn(
-                  "flex h-auto! min-h-14 w-full min-w-0 flex-col items-start justify-center gap-1.5 rounded-none border-0 border-border/60 px-3 py-3 text-left",
-                  "border-r whitespace-normal max-sm:nth-[3n]:border-r-0",
-                  "sm:max-xl:nth-[5n]:border-r-0",
-                  "xl:nth-[9n]:border-r-0",
-                  "after:hidden",
+                  "relative flex h-auto! min-h-14 w-full min-w-0 flex-col items-start justify-center gap-1.5 rounded-none border-t border-r border-b-0 border-border/60 px-3 py-3 text-left",
+                  "max-sm:nth-[3n+1]:border-l sm:max-xl:nth-[5n+1]:border-l xl:nth-[10n+1]:border-l",
+                  "whitespace-normal after:hidden",
                   "text-muted-foreground hover:bg-muted/30 hover:text-foreground",
-                  "data-active:bg-muted/40 data-active:text-foreground",
-                  tab.state === "failed" &&
-                    !isLoading &&
-                    count > 0 &&
-                    "data-active:text-destructive",
+                  QUEUE_TAB_ACTIVE_CLASS[tab.state],
                 )}
               >
                 <span className="flex w-full min-w-0 items-center justify-between gap-2">
                   <span className="truncate text-[11px] font-medium leading-none">
                     {tab.label}
                   </span>
-                  <Icon className="size-3.5 shrink-0 opacity-50" />
+                  <Icon
+                    className={cn(
+                      "size-3.5 shrink-0 opacity-50",
+                      isActive && "opacity-100",
+                    )}
+                  />
                 </span>
                 {isLoading ? (
                   <Skeleton className="h-4 w-14 rounded-sm" />
                 ) : (
                   <span
                     className={cn(
-                      "text-sm font-semibold leading-none tabular-nums",
-                      tab.state === "failed" && count > 0 && "text-destructive",
+                      "font-mono text-sm font-semibold leading-none tabular-nums",
+                      !isActive &&
+                        tab.state === "failed" &&
+                        count > 0 &&
+                        "text-destructive",
                     )}
                   >
                     {count.toLocaleString()}

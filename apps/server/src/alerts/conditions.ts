@@ -1,4 +1,4 @@
-import type { AlertCondition } from "@unstall/validators";
+import type { AlertCondition } from "@unqueue/validators";
 
 export function evaluateCondition(
   condition: AlertCondition,

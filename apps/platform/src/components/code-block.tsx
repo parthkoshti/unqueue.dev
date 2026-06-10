@@ -1,6 +1,6 @@
 import { CheckIcon, CopyIcon } from "lucide-react";
 import { useLayoutEffect, useState } from "react";
-import { cn } from "@unstall/ui/lib/utils";
+import { cn } from "@unqueue/ui/lib/utils";
 import {
   highlightCode,
   stringifyJson,

@@ -1,5 +1,5 @@
 {
-  "name": "@unstall/logger",
+  "name": "@unqueue/logger",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "pino-pretty": "^13.0.0"
   },
   "devDependencies": {
-    "@unstall/config": "workspace:*",
+    "@unqueue/config": "workspace:*",
     "@types/node": "^24.0.3",
     "typescript": "^5.8.3"
   }

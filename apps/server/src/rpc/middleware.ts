@@ -1,9 +1,9 @@
 import { os } from "@orpc/server";
 import { getLogger } from "@orpc/experimental-pino";
-import type { Role } from "@unstall/shared";
-import { hasMinimumRole } from "@unstall/shared";
+import type { Role } from "@unqueue/shared";
+import { hasMinimumRole } from "@unqueue/shared";
 import { ORPCError } from "@orpc/server";
-import { ServiceError } from "@unstall/services";
+import { ServiceError } from "@unqueue/services";
 import type { ServerContext } from "./context.js";
 import { isRpcVerboseLoggingEnabled } from "./logging.js";
 

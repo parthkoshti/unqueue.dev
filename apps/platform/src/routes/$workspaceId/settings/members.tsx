@@ -17,12 +17,12 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@unstall/ui/components/label";
-import { Badge } from "@unstall/ui/components/badge";
+import { Label } from "@unqueue/ui/components/label";
+import { Badge } from "@unqueue/ui/components/badge";
 import {
   Card,
   CardContent,
-} from "@unstall/ui/components/card";
+} from "@unqueue/ui/components/card";
 import {
   Sheet,
   SheetContent,

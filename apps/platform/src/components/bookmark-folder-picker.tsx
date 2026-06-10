@@ -6,7 +6,7 @@ import { z } from "zod";
 import { rpcClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@unstall/ui/components/label";
+import { Label } from "@unqueue/ui/components/label";
 import {
   Dialog,
   DialogContent,
