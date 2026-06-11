@@ -6,6 +6,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "vite.config.ts"],
-  "references": [{ "path": "../../packages/orpc" }]
+  "include": ["src/**/*", "vite.config.ts"]
 }
