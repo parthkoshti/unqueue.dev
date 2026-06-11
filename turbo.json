@@ -23,7 +23,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "*.tsbuildinfo"],
+      "outputs": ["dist/**"],
       "env": ["VITE_API_URL"]
     },
     "dev": {

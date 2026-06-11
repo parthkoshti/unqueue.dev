@@ -9,4 +9,5 @@ doppler.env
 *.log
 .DS_Store
 coverage
+*.tsbuildinfo
 /out
