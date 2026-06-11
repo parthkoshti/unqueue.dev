@@ -13,3 +13,7 @@ coverage
 *.md
 .cursor
 .vscode
+**/.DS_Store
+**/Thumbs.db
+docker-compose*.yml
+docker-compose.infra.yml

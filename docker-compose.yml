@@ -2,8 +2,7 @@ services:
   server:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: server
+      dockerfile: apps/server/Dockerfile
     ports:
       - "${PORT:-3001}:${PORT:-3001}"
     environment:
@@ -21,15 +20,38 @@ services:
       SMTP_FROM: ${SMTP_FROM:-noreply@unqueue.dev}
       PORT: ${PORT:-3001}
       NODE_ENV: ${NODE_ENV:-production}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const port=process.env.PORT||3001;fetch('http://127.0.0.1:'+port+'/health').then((response)=>process.exit(response.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
 
   platform:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: platform
+      dockerfile: apps/platform/Dockerfile
       args:
+        DOPPLER_TOKEN: ${DOPPLER_TOKEN:-}
+        DOPPLER_PROJECT: ${DOPPLER_PROJECT:-unqueue}
+        DOPPLER_CONFIG: ${DOPPLER_CONFIG:-prd}
         VITE_API_URL: ${VITE_API_URL:-}
     ports:
-      - "5174:80"
+      - "${PLATFORM_PORT:-5174}:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
