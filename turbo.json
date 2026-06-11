@@ -9,7 +9,6 @@
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
     "PLATFORM_URL",
-    "API_URL",
     "COOKIE_DOMAIN",
     "ENCRYPTION_KEYS",
     "SMTP_HOST",

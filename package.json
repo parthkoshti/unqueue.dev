@@ -1,9 +1,7 @@
 {
   "name": "unqueue",
-  "private": true,
+  "private": false,
   "scripts": {
-    "doppler:setup": "doppler setup",
-    "doppler:secrets": "doppler secrets",
     "dev": "doppler run -- turbo run dev --filter=@unqueue/platform --filter=@unqueue/server --filter=@unqueue/bullmq --filter=@unqueue/services",
     "dev:packages": "doppler run -- turbo run dev --filter='./packages/*'",
     "build": "doppler run -- turbo run build",

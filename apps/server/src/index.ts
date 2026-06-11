@@ -13,7 +13,7 @@ import { env } from "./env.js";
 import { RealtimeManager } from "./realtime/manager.js";
 import { attachSocketServer } from "./realtime/socket.js";
 import { AlertEngine } from "./alerts/engine.js";
-import { appRouter } from "./rpc/router.js";
+import { appRouter } from "@unqueue/orpc/router";
 import { createRpcHandlerPlugins } from "./rpc/logging.js";
 
 const logger = createLogger("server");

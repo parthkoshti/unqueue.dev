@@ -48,10 +48,7 @@ importers:
         version: 3.13.26(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@unqueue/orpc':
         specifier: workspace:*
-        version: link:../../packages/orpc
-      '@unqueue/server':
-        specifier: workspace:*
-        version: link:../server
+        version: file:packages/orpc(@tanstack/query-core@5.100.14)(kysely@0.28.17)(pino@10.3.1)(postgres@3.4.9)(react@19.2.6)(ws@8.20.1)
       '@unqueue/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -337,6 +334,9 @@ importers:
       '@orpc/client':
         specifier: ^1.14.5
         version: 1.14.5
+      '@orpc/experimental-pino':
+        specifier: ^1.14.5
+        version: 1.14.5(pino@10.3.1)(ws@8.20.1)
       '@orpc/server':
         specifier: 1.14.5
         version: 1.14.5(ws@8.20.1)
@@ -352,15 +352,15 @@ importers:
       '@unqueue/logger':
         specifier: workspace:*
         version: link:../logger
+      '@unqueue/services':
+        specifier: workspace:*
+        version: link:../services
       '@unqueue/shared':
         specifier: workspace:*
         version: link:../shared
       '@unqueue/validators':
         specifier: workspace:*
         version: link:../validators
-      drizzle-orm:
-        specifier: ^0.44.7
-        version: 0.44.7(kysely@0.28.17)(postgres@3.4.9)
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -2730,6 +2730,32 @@ packages:
   '@ungap/structured-clone@1.3.1':
     resolution: {integrity: sha512-mUFwbeTqrVgDQxFveS+df2yfap6iuP20NAKAsBt5jDEoOTDew+zwLAOilHCeQJOVSvmgCX4ogqIrA0mnyr08yQ==}
 
+  '@unqueue/bullmq@file:packages/bullmq':
+    resolution: {directory: packages/bullmq, type: directory}
+
+  '@unqueue/db@file:packages/db':
+    resolution: {directory: packages/db, type: directory}
+
+  '@unqueue/logger@file:packages/logger':
+    resolution: {directory: packages/logger, type: directory}
+
+  '@unqueue/orpc@file:packages/orpc':
+    resolution: {directory: packages/orpc, type: directory}
+    peerDependencies:
+      react: ^19.0.0
+
+  '@unqueue/redis@file:packages/redis':
+    resolution: {directory: packages/redis, type: directory}
+
+  '@unqueue/services@file:packages/services':
+    resolution: {directory: packages/services, type: directory}
+
+  '@unqueue/shared@file:packages/shared':
+    resolution: {directory: packages/shared, type: directory}
+
+  '@unqueue/validators@file:packages/validators':
+    resolution: {directory: packages/validators, type: directory}
+
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -4956,7 +4982,7 @@ snapshots:
       '@better-fetch/fetch': 1.1.21
       '@opentelemetry/semantic-conventions': 1.41.1
       '@standard-schema/spec': 1.1.0
-      better-call: 1.3.5(zod@3.25.76)
+      better-call: 1.3.5(zod@4.4.3)
       jose: 6.2.3
       kysely: 0.28.17
       nanostores: 1.3.0
@@ -6708,6 +6734,164 @@ snapshots:
 
   '@ungap/structured-clone@1.3.1': {}
 
+  '@unqueue/bullmq@file:packages/bullmq':
+    dependencies:
+      '@unqueue/redis': file:packages/redis
+      '@unqueue/validators': file:packages/validators
+      bullmq: 5.77.6
+      ioredis: 5.11.1
+    transitivePeerDependencies:
+      - redis
+      - supports-color
+
+  '@unqueue/db@file:packages/db(kysely@0.28.17)':
+    dependencies:
+      '@unqueue/shared': file:packages/shared
+      drizzle-orm: 0.44.7(kysely@0.28.17)(postgres@3.4.9)
+      postgres: 3.4.9
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - prisma
+      - sql.js
+      - sqlite3
+
+  '@unqueue/logger@file:packages/logger':
+    dependencies:
+      pino: 10.3.1
+      pino-pretty: 13.1.3
+
+  '@unqueue/orpc@file:packages/orpc(@tanstack/query-core@5.100.14)(kysely@0.28.17)(pino@10.3.1)(postgres@3.4.9)(react@19.2.6)(ws@8.20.1)':
+    dependencies:
+      '@orpc/client': 1.14.5
+      '@orpc/experimental-pino': 1.14.5(pino@10.3.1)(ws@8.20.1)
+      '@orpc/server': 1.14.5(ws@8.20.1)
+      '@orpc/tanstack-query': 1.14.5(@orpc/client@1.14.5)(@tanstack/query-core@5.100.14)
+      '@tanstack/react-query': 5.100.14(react@19.2.6)
+      '@unqueue/db': file:packages/db(kysely@0.28.17)
+      '@unqueue/logger': file:packages/logger
+      '@unqueue/services': file:packages/services(kysely@0.28.17)(postgres@3.4.9)
+      '@unqueue/shared': file:packages/shared
+      '@unqueue/validators': file:packages/validators
+      react: 19.2.6
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tanstack/query-core'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - crossws
+      - expo-sqlite
+      - fastify
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - pino
+      - postgres
+      - prisma
+      - redis
+      - sql.js
+      - sqlite3
+      - supports-color
+      - ws
+
+  '@unqueue/redis@file:packages/redis':
+    dependencies:
+      ioredis: 5.11.1
+    transitivePeerDependencies:
+      - supports-color
+
+  '@unqueue/services@file:packages/services(kysely@0.28.17)(postgres@3.4.9)':
+    dependencies:
+      '@unqueue/bullmq': file:packages/bullmq
+      '@unqueue/db': file:packages/db(kysely@0.28.17)
+      '@unqueue/logger': file:packages/logger
+      '@unqueue/redis': file:packages/redis
+      '@unqueue/shared': file:packages/shared
+      '@unqueue/validators': file:packages/validators
+      drizzle-orm: 0.44.7(kysely@0.28.17)(postgres@3.4.9)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@prisma/client'
+      - '@tidbcloud/serverless'
+      - '@types/better-sqlite3'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - knex
+      - kysely
+      - mysql2
+      - pg
+      - postgres
+      - prisma
+      - redis
+      - sql.js
+      - sqlite3
+      - supports-color
+
+  '@unqueue/shared@file:packages/shared':
+    dependencies:
+      '@paralleldrive/cuid2': 2.3.1
+
+  '@unqueue/validators@file:packages/validators':
+    dependencies:
+      zod: 3.25.76
+
   '@vitejs/plugin-react@4.7.0(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.3))':
     dependencies:
       '@babel/core': 7.29.7
@@ -6850,15 +7034,6 @@ snapshots:
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - '@opentelemetry/api'
-
-  better-call@1.3.5(zod@3.25.76):
-    dependencies:
-      '@better-auth/utils': 0.4.0
-      '@better-fetch/fetch': 1.1.21
-      rou3: 0.7.12
-      set-cookie-parser: 3.1.0
-    optionalDependencies:
-      zod: 3.25.76
 
   better-call@1.3.5(zod@4.4.3):
     dependencies:

@@ -1,7 +1,7 @@
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
-import type { AppRouter } from "@unqueue/server/router";
+import type { AppRouter } from "@unqueue/orpc/router";
 import { apiUrl } from "./api-url";
 
 let workspaceId: string | undefined;

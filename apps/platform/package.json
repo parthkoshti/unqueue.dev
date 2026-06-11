@@ -20,7 +20,6 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.26",
     "@unqueue/orpc": "workspace:*",
-    "@unqueue/server": "workspace:*",
     "@unqueue/shared": "workspace:*",
     "@unqueue/ui": "workspace:*",
     "better-auth": "^1.6.11",

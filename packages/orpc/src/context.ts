@@ -1,5 +1,7 @@
+import type { LoggerContext } from "@orpc/experimental-pino";
 import type { Database } from "@unqueue/db";
 import type { Logger } from "@unqueue/logger";
+import type { Services } from "@unqueue/services";
 import type { Role } from "@unqueue/shared";
 
 export type SessionUser = {
@@ -17,3 +19,8 @@ export type ORPCContext = {
     role: Role;
   };
 };
+
+export type ServerContext = ORPCContext &
+  LoggerContext & {
+    services: Services;
+  };

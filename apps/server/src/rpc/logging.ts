@@ -1,7 +1,7 @@
 import { LoggingHandlerPlugin } from "@orpc/experimental-pino";
 import type { StandardHandlerPlugin } from "@orpc/server/standard";
 import type { Logger } from "@unqueue/logger";
-import type { ServerContext } from "./context.js";
+import type { ServerContext } from "@unqueue/orpc";
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -22,4 +22,3 @@ export function createRpcHandlerPlugins(
   ];
 }
 
-export const isRpcVerboseLoggingEnabled = !isDev;
