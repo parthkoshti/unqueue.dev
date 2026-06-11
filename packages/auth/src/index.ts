@@ -59,6 +59,8 @@ export function createAuth(options: CreateAuthOptions) {
         });
       },
       sendOnSignUp: true,
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
     },
     advanced: {
       database: {

@@ -160,7 +160,8 @@ export function BookmarkFolderPicker({
                   <Button
                     type="submit"
                     size="sm"
-                    disabled={createFolderForm.state.isSubmitting}
+                    loading={createFolderForm.state.isSubmitting}
+                    loadingText="Creating..."
                   >
                     Create
                   </Button>

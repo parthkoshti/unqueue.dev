@@ -3,4 +3,7 @@ import { apiUrl } from "./api-url";
 
 export const authClient: ReturnType<typeof createAuthClient> = createAuthClient({
   baseURL: apiUrl,
+  fetchOptions: {
+    credentials: "include",
+  },
 });

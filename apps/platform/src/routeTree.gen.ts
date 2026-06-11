@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as WorkspaceIdRouteImport } from './routes/$workspaceId'
@@ -23,6 +24,11 @@ import { Route as WorkspaceIdSettingsEnvironmentsRouteImport } from './routes/$w
 import { Route as WorkspaceIdSettingsAlertsRouteImport } from './routes/$workspaceId/settings/alerts'
 import { Route as WorkspaceIdEnvironmentIdQueuesQueueNameRouteImport } from './routes/$workspaceId/$environmentId/queues/$queueName'
 
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/$workspaceId': typeof WorkspaceIdRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/$workspaceId/$environmentId': typeof WorkspaceIdEnvironmentIdRouteWithChildren
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
   '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/$workspaceId': typeof WorkspaceIdRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
   '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/$workspaceId': typeof WorkspaceIdRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/$workspaceId/$environmentId': typeof WorkspaceIdEnvironmentIdRouteWithChildren
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
   '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/$workspaceId'
     | '/login'
     | '/signup'
+    | '/verify-email'
     | '/$workspaceId/$environmentId'
     | '/$workspaceId/bookmarks'
     | '/$workspaceId/connections'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/$workspaceId'
     | '/login'
     | '/signup'
+    | '/verify-email'
     | '/$workspaceId/bookmarks'
     | '/$workspaceId/connections'
     | '/invite/$token'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/$workspaceId'
     | '/login'
     | '/signup'
+    | '/verify-email'
     | '/$workspaceId/$environmentId'
     | '/$workspaceId/bookmarks'
     | '/$workspaceId/connections'
@@ -192,11 +204,19 @@ export interface RootRouteChildren {
   WorkspaceIdRoute: typeof WorkspaceIdRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   InviteTokenRoute: typeof InviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -335,6 +355,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceIdRoute: WorkspaceIdRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   InviteTokenRoute: InviteTokenRoute,
 }
 export const routeTree = rootRouteImport

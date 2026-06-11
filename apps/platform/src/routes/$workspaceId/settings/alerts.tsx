@@ -702,11 +702,11 @@ function CreateAlertForm({
         </Button>
         <Button
           type="submit"
-          disabled={
-            form.state.isSubmitting || !canManage || !hasRedisConnections
-          }
+          loading={form.state.isSubmitting}
+          loadingText="Creating..."
+          disabled={!canManage || !hasRedisConnections}
         >
-          {form.state.isSubmitting ? "Creating..." : "Create alert"}
+          Create alert
         </Button>
       </SheetFooter>
     </form>
@@ -858,11 +858,13 @@ function AlertDetailSheet({
               type="button"
               variant="destructive"
               className="w-full"
-              disabled={!deleteConfirmed || isDeleting}
+              loading={isDeleting}
+              loadingText="Deleting..."
+              disabled={!deleteConfirmed}
               onClick={() => void handleDelete()}
             >
               <Trash2Icon />
-              {isDeleting ? "Deleting..." : "Delete alert"}
+              Delete alert
             </Button>
           </div>
         )}

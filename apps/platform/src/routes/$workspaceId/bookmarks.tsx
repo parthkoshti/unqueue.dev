@@ -173,7 +173,11 @@ function FolderFormSheet({
           </form.Field>
 
           <SheetFooter className="mt-auto px-0">
-            <Button type="submit" disabled={form.state.isSubmitting}>
+            <Button
+              type="submit"
+              loading={form.state.isSubmitting}
+              loadingText={isEdit ? "Saving..." : "Creating..."}
+            >
               {isEdit ? "Save changes" : "Create folder"}
             </Button>
           </SheetFooter>

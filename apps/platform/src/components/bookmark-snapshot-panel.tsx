@@ -460,7 +460,8 @@ function NoteItem({
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={editForm.state.isSubmitting}
+                  loading={editForm.state.isSubmitting}
+                  loadingText="Saving..."
                 >
                   Save
                 </Button>
@@ -703,7 +704,8 @@ export function BookmarkSnapshotPanel({
                     <Button
                       type="submit"
                       size="sm"
-                      disabled={addNoteMutation.isPending}
+                      loading={addNoteMutation.isPending}
+                      loadingText="Adding..."
                     >
                       Add note
                     </Button>

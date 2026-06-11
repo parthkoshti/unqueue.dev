@@ -649,11 +649,13 @@ function RedisConnectionForm({
               type="button"
               variant="destructive"
               className="w-full"
-              disabled={!deleteConfirmed || isDeleting || form.state.isSubmitting}
+              loading={isDeleting}
+              loadingText="Deleting..."
+              disabled={!deleteConfirmed || form.state.isSubmitting}
               onClick={() => void handleDelete()}
             >
               <Trash2Icon />
-              {isDeleting ? "Deleting..." : "Delete connection"}
+              Delete connection
             </Button>
           </div>
         )}
@@ -666,22 +668,20 @@ function RedisConnectionForm({
         <Button
           type="button"
           variant="outline"
+          loading={isTesting}
+          loadingText="Testing..."
+          disabled={form.state.isSubmitting || !canManage}
           onClick={() => void handleTestConnection()}
-          disabled={isTesting || form.state.isSubmitting || !canManage}
         >
-          {isTesting ? "Testing..." : "Test connection"}
+          Test connection
         </Button>
         <Button
           type="submit"
-          disabled={form.state.isSubmitting || isTesting || !canManage}
+          loading={form.state.isSubmitting}
+          loadingText={mode === "create" ? "Adding..." : "Saving..."}
+          disabled={isTesting || !canManage}
         >
-          {form.state.isSubmitting
-            ? mode === "create"
-              ? "Adding..."
-              : "Saving..."
-            : mode === "create"
-              ? "Add connection"
-              : "Save changes"}
+          {mode === "create" ? "Add connection" : "Save changes"}
         </Button>
       </SheetFooter>
     </form>

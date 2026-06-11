@@ -13,6 +13,7 @@ export function isPublicPath(pathname: string) {
   return (
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/verify-email" ||
     pathname.startsWith("/invite/")
   );
 }

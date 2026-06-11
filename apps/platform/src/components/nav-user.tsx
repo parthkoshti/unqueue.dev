@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronsUpDownIcon, LogInIcon, LogOutIcon } from "lucide-react";
 import {
   Avatar,
@@ -24,6 +24,7 @@ import { authClient } from "@/lib/auth";
 
 export function NavUser() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isMobile } = useSidebar();
 
   const sessionQuery = useQuery({
@@ -97,6 +98,7 @@ export function NavUser() {
             <DropdownMenuItem
               onClick={async () => {
                 await authClient.signOut();
+                await queryClient.invalidateQueries({ queryKey: ["session"] });
                 navigate({ to: "/login" });
               }}
             >

@@ -16,6 +16,16 @@ export function createMailer() {
 
   return {
     async send(options: { to: string; subject: string; html: string }) {
+      if (!process.env.SMTP_HOST) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error("SMTP is not configured");
+        }
+        console.warn(
+          `[auth] SMTP not configured; skipped email to ${options.to}: ${options.subject}`,
+        );
+        return;
+      }
+
       await transport.sendMail({
         from: process.env.SMTP_FROM ?? "noreply@unqueue.dev",
         to: options.to,

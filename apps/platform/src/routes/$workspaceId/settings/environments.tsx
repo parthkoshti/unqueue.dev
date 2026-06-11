@@ -130,8 +130,8 @@ function CreateEnvironmentForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={form.state.isSubmitting}>
-          {form.state.isSubmitting ? "Creating..." : "Create environment"}
+        <Button type="submit" loading={form.state.isSubmitting} loadingText="Creating...">
+          Create environment
         </Button>
       </SheetFooter>
     </form>

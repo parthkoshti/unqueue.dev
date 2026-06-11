@@ -337,8 +337,8 @@ function InviteMemberForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={form.state.isSubmitting}>
-          {form.state.isSubmitting ? "Sending..." : "Send invite"}
+        <Button type="submit" loading={form.state.isSubmitting} loadingText="Sending...">
+          Send invite
         </Button>
       </SheetFooter>
     </form>
@@ -504,14 +504,12 @@ function EditMemberForm({
               type="button"
               variant="destructive"
               className="w-full"
-              disabled={
-                removeConfirm !== removePhrase ||
-                isRemoving ||
-                form.state.isSubmitting
-              }
+              loading={isRemoving}
+              loadingText="Removing..."
+              disabled={removeConfirm !== removePhrase || form.state.isSubmitting}
               onClick={() => void handleRemove()}
             >
-              {isRemoving ? "Removing..." : "Remove member"}
+              Remove member
             </Button>
           </div>
         )}
@@ -522,8 +520,13 @@ function EditMemberForm({
           {editable ? "Cancel" : "Close"}
         </Button>
         {editable && member.role !== "owner" && (
-          <Button type="submit" disabled={form.state.isSubmitting || isRemoving}>
-            {form.state.isSubmitting ? "Saving..." : "Save changes"}
+          <Button
+            type="submit"
+            loading={form.state.isSubmitting}
+            loadingText="Saving..."
+            disabled={isRemoving}
+          >
+            Save changes
           </Button>
         )}
       </SheetFooter>
@@ -650,10 +653,12 @@ function EditInviteForm({
               type="button"
               variant="destructive"
               className="w-full"
-              disabled={isRevoking || form.state.isSubmitting}
+              loading={isRevoking}
+              loadingText="Revoking..."
+              disabled={form.state.isSubmitting}
               onClick={() => void handleRevoke()}
             >
-              {isRevoking ? "Revoking..." : "Revoke invite"}
+              Revoke invite
             </Button>
           </div>
         )}
@@ -664,8 +669,13 @@ function EditInviteForm({
           {editable ? "Cancel" : "Close"}
         </Button>
         {editable && (
-          <Button type="submit" disabled={form.state.isSubmitting || isRevoking}>
-            {form.state.isSubmitting ? "Saving..." : "Save changes"}
+          <Button
+            type="submit"
+            loading={form.state.isSubmitting}
+            loadingText="Saving..."
+            disabled={isRevoking}
+          >
+            Save changes
           </Button>
         )}
       </SheetFooter>
