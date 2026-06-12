@@ -1,8 +1,5 @@
 import {
-  getJobLogs,
-  getJobPayload,
-  getJobProgress,
-  getJobState,
+  getJob,
   listJobs,
   listJobIds,
   type JobListState,
@@ -93,7 +90,7 @@ export function createJobService(deps: ServiceDeps, logger: Logger) {
         actor,
         input.redisInstanceId,
       );
-      const job = await getJobState(
+      const job = await getJob(
         connection,
         input.queueName,
         prefix,
@@ -102,51 +99,6 @@ export function createJobService(deps: ServiceDeps, logger: Logger) {
 
       if (!job) notFound("Job");
       return job;
-    },
-
-    async getPayload(
-      actor: Actor,
-      input: {
-        redisInstanceId: string;
-        queueName: string;
-        jobId: string;
-      },
-    ) {
-      const { connection, prefix } = await getConnection(
-        actor,
-        input.redisInstanceId,
-      );
-      return getJobPayload(connection, input.queueName, prefix, input.jobId);
-    },
-
-    async getProgress(
-      actor: Actor,
-      input: {
-        redisInstanceId: string;
-        queueName: string;
-        jobId: string;
-      },
-    ) {
-      const { connection, prefix } = await getConnection(
-        actor,
-        input.redisInstanceId,
-      );
-      return getJobProgress(connection, input.queueName, prefix, input.jobId);
-    },
-
-    async getLogs(
-      actor: Actor,
-      input: {
-        redisInstanceId: string;
-        queueName: string;
-        jobId: string;
-      },
-    ) {
-      const { connection, prefix } = await getConnection(
-        actor,
-        input.redisInstanceId,
-      );
-      return getJobLogs(connection, input.queueName, prefix, input.jobId);
     },
   };
 }

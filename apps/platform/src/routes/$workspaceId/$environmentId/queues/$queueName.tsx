@@ -12,6 +12,12 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 import { rpcClient } from "@/lib/api";
+import { useStatusBar } from "@/components/shell-context";
+import {
+  environmentQueuesQueryOptions,
+  environmentRedisQueryOptions,
+} from "@/lib/environment-queues-query";
+import { QueueActionDialog, type QueueAction } from "@/components/queue-action-dialog";
 import {
   applyLatestJobRemoved,
   applyLatestJobUpdate,
@@ -106,6 +112,16 @@ function QueuePage() {
 
   const { workspaceRole } = useShellContext();
   const canWrite = workspaceRole !== undefined && workspaceRole !== "viewer";
+  const { setSlotContent } = useStatusBar();
+  const [pendingAction, setPendingAction] = useState<QueueAction | null>(null);
+
+  const { data: redisInstances } = useQuery(environmentRedisQueryOptions(environmentId));
+  const redisNickname = redisInstances?.find((r) => r.id === redisInstanceId)?.nickname;
+
+  const { data: cachedQueues } = useQuery(environmentQueuesQueryOptions(environmentId));
+  const cachedQueue = cachedQueues?.find(
+    (q) => q.name === queueName && q.redisInstanceId === redisInstanceId,
+  );
 
   const queueMetaQuery = useQuery({
     queryKey: ["queue-meta", redisInstanceId, queueName],
@@ -125,7 +141,7 @@ function QueuePage() {
         queueName,
         window: metricsWindow,
       }),
-    enabled: !!queueMetaQuery.data,
+    enabled: true,
   });
 
   const stateCount = getQueueTabJobCount(queueMetaQuery.data?.counts, state);
@@ -144,7 +160,7 @@ function QueuePage() {
     initialPageParam: 0,
     getNextPageParam: (lastPage, _allPages, lastPageParam) =>
       lastPage.length < PAGE_SIZE ? undefined : lastPageParam + 1,
-    enabled: !queueMetaQuery.isLoading && state !== "schedulers",
+    enabled: state !== "schedulers",
   });
 
   const jobs = jobsQuery.data?.pages.flat() ?? [];
@@ -308,6 +324,35 @@ function QueuePage() {
     void jobsQuery.refetch();
   };
 
+  const executeAction = async (action: QueueAction) => {
+    switch (action) {
+      case "refresh":
+        refresh();
+        break;
+      case "pause":
+        await rpcClient.queueAdmin.pause({ redisInstanceId, queueName });
+        break;
+      case "resume":
+        await rpcClient.queueAdmin.resume({ redisInstanceId, queueName });
+        break;
+      case "drain":
+        await rpcClient.queueAdmin.drain({ redisInstanceId, queueName, delayed: false });
+        refresh();
+        break;
+      case "clean":
+        await Promise.all([
+          rpcClient.queueAdmin.clean({ redisInstanceId, queueName, type: "completed", grace: 0, limit: 10000 }),
+          rpcClient.queueAdmin.clean({ redisInstanceId, queueName, type: "failed", grace: 0, limit: 10000 }),
+        ]);
+        refresh();
+        break;
+      case "obliterate":
+        await rpcClient.queueAdmin.obliterate({ redisInstanceId, queueName });
+        refresh();
+        break;
+    }
+  };
+
   const isLoadingJobs =
     queueMetaQuery.isPending ||
     (state !== "schedulers" && jobsQuery.isPending);
@@ -323,6 +368,28 @@ function QueuePage() {
   hasNextPageRef.current = hasNextPage;
 
   const minJobsToLoad = Math.min(PAGE_SIZE, stateCount);
+
+  useEffect(() => {
+    if (isLoadingJobs || state === "schedulers") {
+      setSlotContent(null);
+      return;
+    }
+    setSlotContent(
+      <span className="tabular-nums">
+        {fetchedCount.toLocaleString()} of {stateCount.toLocaleString()} loaded
+        {isFetchingNextPage && (
+          <span className="ml-2 inline-flex items-center gap-1">
+            <RefreshCwIcon className="size-3 animate-spin" />
+            Loading more
+          </span>
+        )}
+      </span>,
+    );
+  }, [isLoadingJobs, state, fetchedCount, stateCount, isFetchingNextPage, setSlotContent]);
+
+  useEffect(() => {
+    return () => setSlotContent(null);
+  }, [setSlotContent]);
 
   useEffect(() => {
     if (state === "schedulers" || isLoadingJobs || isFetchingNextPage) return;
@@ -409,16 +476,22 @@ function QueuePage() {
     <div className="flex h-full flex-col overflow-hidden">
       <QueuePageHeader
         queueName={queueName}
-        isPaused={isPaused}
+        isPaused={queueMetaQuery.data?.isPaused ?? cachedQueue?.isPaused ?? false}
+        counts={queueMetaQuery.data?.counts ?? cachedQueue?.counts}
+        redisNickname={redisNickname}
         isFetching={isFetching}
         canWrite={canWrite}
-        onRefresh={refresh}
-        onPause={() =>
-          void rpcClient.queueAdmin.pause({ redisInstanceId, queueName })
-        }
-        onResume={() =>
-          void rpcClient.queueAdmin.resume({ redisInstanceId, queueName })
-        }
+        onAction={setPendingAction}
+      />
+      <QueueActionDialog
+        open={pendingAction !== null}
+        action={pendingAction}
+        queueName={queueName}
+        onConfirm={() => {
+          if (pendingAction) void executeAction(pendingAction);
+          setPendingAction(null);
+        }}
+        onCancel={() => setPendingAction(null)}
       />
 
       <QueueMetricsPanel
@@ -509,20 +582,6 @@ function QueuePage() {
           )}
         </div>
 
-        {!isLoadingJobs && fetchedCount > 0 && state !== "schedulers" && (
-          <div className="flex shrink-0 items-center justify-between border-t border-border bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
-            <span className="tabular-nums">
-              {fetchedCount.toLocaleString()} of {stateCount.toLocaleString()}{" "}
-              loaded
-            </span>
-            {jobsQuery.isFetchingNextPage && (
-              <span className="flex items-center gap-1.5">
-                <RefreshCwIcon className="size-3 animate-spin" />
-                Loading more
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       <Sheet
@@ -551,3 +610,4 @@ function QueuePage() {
     </div>
   );
 }
+

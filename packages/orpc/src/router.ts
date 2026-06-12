@@ -31,6 +31,14 @@ const workspaceRouter = {
     .handler(async ({ context, input }) => {
       return context.services.workspace.get(toActor(context), input.workspaceId);
     }),
+
+  rename: base
+    .input(z.object({ workspaceId: z.string().length(24), name: z.string().min(1).max(64) }))
+    .use(authed)
+    .use(requireRole("admin"))
+    .handler(async ({ context, input }) => {
+      return context.services.workspace.rename(toActor(context), input.workspaceId, input.name);
+    }),
 };
 
 const membersRouter = {
@@ -191,6 +199,13 @@ const redisRouter = {
     .handler(async ({ context, input }) => {
       return context.services.redis.getClientCounts(toActor(context), input.environmentId);
     }),
+
+  getClients: base
+    .input(z.object({ redisInstanceId: z.string().length(24) }))
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.redis.getClients(toActor(context), input);
+    }),
 };
 
 const metricsWindowSchema = z.enum(["1m", "5m", "15m", "1h", "24h", "7d"]);
@@ -316,44 +331,6 @@ const jobRouter = {
       return context.services.job.get(toActor(context), input);
     }),
 
-  getPayload: base
-    .input(
-      z.object({
-        redisInstanceId: z.string().length(24),
-        queueName: z.string(),
-        jobId: z.string(),
-      }),
-    )
-    .use(authed)
-    .handler(async ({ context, input }) => {
-      return context.services.job.getPayload(toActor(context), input);
-    }),
-
-  getProgress: base
-    .input(
-      z.object({
-        redisInstanceId: z.string().length(24),
-        queueName: z.string(),
-        jobId: z.string(),
-      }),
-    )
-    .use(authed)
-    .handler(async ({ context, input }) => {
-      return context.services.job.getProgress(toActor(context), input);
-    }),
-
-  getLogs: base
-    .input(
-      z.object({
-        redisInstanceId: z.string().length(24),
-        queueName: z.string(),
-        jobId: z.string(),
-      }),
-    )
-    .use(authed)
-    .handler(async ({ context, input }) => {
-      return context.services.job.getLogs(toActor(context), input);
-    }),
 };
 
 const jobActionInput = z.object({

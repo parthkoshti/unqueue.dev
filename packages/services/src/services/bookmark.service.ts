@@ -1,9 +1,4 @@
-import {
-  getJobLogs,
-  getJobPayload,
-  getJobProgress,
-  getJobState,
-} from "@unqueue/bullmq";
+import { getJob } from "@unqueue/bullmq";
 import { and, count, desc, eq, or } from "drizzle-orm";
 import {
   bookmarkFolders,
@@ -110,12 +105,7 @@ export function createBookmarkService(deps: ServiceDeps, logger: Logger) {
       input.redisInstanceId,
     );
 
-    const [job, payload, progress, logs] = await Promise.all([
-      getJobState(connection, input.queueName, prefix, input.jobId),
-      getJobPayload(connection, input.queueName, prefix, input.jobId),
-      getJobProgress(connection, input.queueName, prefix, input.jobId),
-      getJobLogs(connection, input.queueName, prefix, input.jobId),
-    ]);
+    const job = await getJob(connection, input.queueName, prefix, input.jobId);
 
     if (!job) notFound("Job");
 
@@ -129,9 +119,9 @@ export function createBookmarkService(deps: ServiceDeps, logger: Logger) {
       snapshot: {
         capturedAt: new Date().toISOString(),
         job,
-        payload,
-        progress,
-        logs,
+        payload: job.payload,
+        progress: job.progress,
+        logs: job.logs,
       },
     };
   }

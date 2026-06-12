@@ -10,23 +10,19 @@ import {
   CirclePlusIcon,
   ClockIcon,
   GitBranchIcon,
-  MoreHorizontalIcon,
   PauseCircleIcon,
+  PlayCircleIcon,
   RefreshCwIcon,
   HistoryIcon,
+  SparklesIcon,
   TimerIcon,
+  Trash2Icon,
   XCircleIcon,
   ZapIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { RedisIcon } from "@/components/icons/redis";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -147,53 +143,100 @@ function formatThroughput(value: number) {
   return `${value.toFixed(1)}/min`;
 }
 
+type QueueAction = "refresh" | "pause" | "resume" | "drain" | "clean" | "obliterate";
+
 export function QueuePageHeader({
   queueName,
   isPaused,
+  counts,
+  redisNickname,
   isFetching,
   canWrite,
-  onRefresh,
-  onPause,
-  onResume,
+  onAction,
 }: {
   queueName: string;
   isPaused: boolean;
+  counts?: QueueCounts;
+  redisNickname?: string;
   isFetching: boolean;
   canWrite: boolean;
-  onRefresh: () => void;
-  onPause: () => void;
-  onResume: () => void;
+  onAction: (action: QueueAction) => void;
 }) {
+  const health = counts
+    ? isPaused
+      ? "paused"
+      : counts.failed > 0
+        ? "failed"
+        : counts.waiting + counts.delayed >= 10
+          ? "backlog"
+          : counts.active > 0
+            ? "active"
+            : "idle"
+    : null;
+
+  const HEALTH_DOT: Record<string, string> = {
+    failed: "bg-destructive",
+    paused: "bg-amber-500",
+    backlog: "bg-sky-500",
+    active: "bg-blue-500",
+    idle: "bg-emerald-500/50",
+  };
+
+  const HEALTH_LABEL: Record<string, string> = {
+    failed: "Failed jobs",
+    paused: "Paused",
+    backlog: "Backlog",
+    active: "Active",
+    idle: "Idle",
+  };
+
   return (
     <div className="flex shrink-0 items-center justify-between gap-4 border-b px-4 py-3">
-      <h1 className="truncate text-base font-medium">{queueName}</h1>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button size="icon-sm" variant="ghost" aria-label="Queue actions">
-            <MoreHorizontalIcon />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={onRefresh} disabled={isFetching}>
-            <RefreshCwIcon
-              className={isFetching ? "animate-spin" : undefined}
-            />
-            Refresh
-          </DropdownMenuItem>
-          {canWrite && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onPause} disabled={isPaused}>
-                <PauseCircleIcon />
-                Pause queue
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onResume} disabled={!isPaused}>
-                Resume queue
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex min-w-0 items-center gap-2.5">
+        {health && (
+          <span
+            className={cn("size-2 shrink-0 rounded-full", HEALTH_DOT[health])}
+            title={HEALTH_LABEL[health]}
+          />
+        )}
+        <h1 className="truncate text-base font-medium">{queueName}</h1>
+        {redisNickname && (
+          <span className="flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+            <RedisIcon className="size-3 shrink-0" />
+            {redisNickname}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Button size="sm" variant="ghost" onClick={() => onAction("refresh")} disabled={isFetching}>
+          <RefreshCwIcon className={isFetching ? "animate-spin" : undefined} />
+          Refresh
+        </Button>
+        {canWrite && (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => onAction("pause")} disabled={isPaused}>
+              <PauseCircleIcon />
+              Pause
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onAction("resume")} disabled={!isPaused}>
+              <PlayCircleIcon />
+              Resume
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onAction("drain")}>
+              <SparklesIcon />
+              Drain
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onAction("clean")}>
+              <Trash2Icon />
+              Clean
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => onAction("obliterate")}>
+              <XCircleIcon />
+              Obliterate
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -294,7 +337,7 @@ function MetricCard({
     >
       <p className="text-[11px] text-muted-foreground">{label}</p>
       {isLoading ? (
-        <Skeleton className="h-7 w-20" />
+        <Skeleton className="h-8 w-20" />
       ) : (
         <p className="font-mono text-2xl font-semibold tracking-tight tabular-nums">
           {value}
@@ -363,7 +406,7 @@ export function QueueStateTabs({
                   />
                 </span>
                 {isLoading ? (
-                  <Skeleton className="h-4 w-14 rounded-sm" />
+                  <Skeleton className="h-3.5 w-14 rounded-sm" />
                 ) : (
                   <span
                     className={cn(

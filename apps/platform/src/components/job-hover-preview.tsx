@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { rpcClient } from "@/lib/api";
 import { CodeBlock } from "@/components/code-block";
+import type { ParsedLog } from "@unqueue/bullmq";
 
 export function JobHoverPreview({
   redisInstanceId,
@@ -13,16 +14,9 @@ export function JobHoverPreview({
   jobId: string;
   children: React.ReactNode;
 }) {
-  const logsQuery = useQuery({
-    queryKey: ["job-logs-preview", redisInstanceId, queueName, jobId],
-    queryFn: () => rpcClient.job.getLogs({ redisInstanceId, queueName, jobId }),
-    enabled: false,
-  });
-
-  const progressQuery = useQuery({
-    queryKey: ["job-progress-preview", redisInstanceId, queueName, jobId],
-    queryFn: () =>
-      rpcClient.job.getProgress({ redisInstanceId, queueName, jobId }),
+  const jobQuery = useQuery({
+    queryKey: ["job", redisInstanceId, queueName, jobId],
+    queryFn: () => rpcClient.job.get({ redisInstanceId, queueName, jobId }),
     enabled: false,
   });
 
@@ -30,8 +24,7 @@ export function JobHoverPreview({
     <div
       className="group relative"
       onMouseEnter={() => {
-        if (!logsQuery.isFetching) void logsQuery.refetch();
-        if (!progressQuery.isFetching) void progressQuery.refetch();
+        if (!jobQuery.isFetching) void jobQuery.refetch();
       }}
     >
       {children}
@@ -40,7 +33,7 @@ export function JobHoverPreview({
           Progress
         </p>
         <CodeBlock
-          value={progressQuery.data ?? {}}
+          value={jobQuery.data?.progress ?? {}}
           maxHeight="5rem"
           className="mb-2"
         />
@@ -48,7 +41,7 @@ export function JobHoverPreview({
           Logs (tail)
         </p>
         <div className="max-h-20 overflow-hidden text-[10px] font-mono">
-          {(logsQuery.data ?? []).slice(-5).map((log, i) => (
+          {(jobQuery.data?.logs ?? []).slice(-5).map((log: ParsedLog, i: number) => (
             <div key={i}>
               {log.format === "json" && log.entry
                 ? log.entry.message

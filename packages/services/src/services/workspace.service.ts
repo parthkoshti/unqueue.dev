@@ -34,6 +34,19 @@ export function createWorkspaceService(deps: ServiceDeps, logger: Logger) {
       if (!workspace) notFound("Workspace");
       return workspace;
     },
+
+    async rename(_actor: Actor, workspaceId: string, name: string) {
+      logger.debug({ workspaceId, name }, "Renaming workspace");
+
+      const [updated] = await deps.db
+        .update(workspaces)
+        .set({ name })
+        .where(eq(workspaces.id, workspaceId))
+        .returning();
+
+      if (!updated) notFound("Workspace");
+      return updated;
+    },
   };
 }
 

@@ -1,7 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { DatabaseIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
+import {
+  DatabaseIcon,
+  PencilIcon,
+  PlusIcon,
+  RefreshCwIcon,
+  UsersIcon,
+} from "lucide-react";
 import { rpcClient } from "@/lib/api";
 import { useShellContext } from "@/hooks/use-shell-context";
 import { Button } from "@/components/ui/button";
@@ -12,6 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@unqueue/ui/components/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
@@ -30,7 +43,8 @@ export const Route = createFileRoute("/$workspaceId/connections")({
       }),
       context.queryClient.ensureQueryData({
         queryKey: ["environments", params.workspaceId],
-        queryFn: () => rpcClient.environment.list({ workspaceId: params.workspaceId }),
+        queryFn: () =>
+          rpcClient.environment.list({ workspaceId: params.workspaceId }),
       }),
     ]),
   component: ConnectionsPage,
@@ -70,9 +84,7 @@ function ConnectionStatusChip({ status }: { status: string }) {
           "size-1.5 rounded-full",
           status === "connected" && "bg-emerald-500",
           status === "error" && "bg-destructive",
-          status !== "connected" &&
-            status !== "error" &&
-            "bg-amber-500",
+          status !== "connected" && status !== "error" && "bg-amber-500",
         )}
         aria-hidden
       />
@@ -100,15 +112,16 @@ function formatLastConnected(at: Date | string | null | undefined) {
   }).format(date);
 }
 
-
 function RedisInstanceCard({
   instance,
   canManage,
   onEdit,
+  onClients,
 }: {
   instance: RedisInstanceWithEnv;
   canManage: boolean;
   onEdit: () => void;
+  onClients: () => void;
 }) {
   const endpoint =
     instance.host != null
@@ -116,42 +129,44 @@ function RedisInstanceCard({
       : null;
 
   return (
-    <Card
-      className={cn(
-        "flex h-full flex-col",
-        canManage &&
-          "cursor-pointer transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-      )}
-      tabIndex={canManage ? 0 : undefined}
-      role={canManage ? "button" : undefined}
-      onClick={() => {
-        if (canManage) onEdit();
-      }}
-      onKeyDown={(e) => {
-        if (!canManage) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onEdit();
-        }
-      }}
-    >
-      <CardHeader className="flex-row items-start justify-between gap-3 space-y-0 pb-2">
-        <div className="min-w-0 space-y-1">
-          <CardTitle className="truncate text-sm">{instance.nickname}</CardTitle>
-          <p className="truncate font-mono text-xs text-muted-foreground">
-            Redis
-          </p>
+    <Card className="flex h-full flex-col">
+      <CardHeader className="space-y-0 pb-2">
+        <div className="flex items-center gap-2">
+          <CardTitle className="truncate text-sm">
+            {instance.nickname}
+          </CardTitle>
+          <ConnectionStatusChip status={instance.status} />
+          <div className="ml-auto flex shrink-0 gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={onClients}
+            >
+              <UsersIcon />
+              Clients
+            </Button>
+            {canManage && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={onEdit}
+              >
+                <PencilIcon />
+                Edit
+              </Button>
+            )}
+          </div>
         </div>
-
-        <ConnectionStatusChip status={instance.status} />
+        <p className="font-mono text-xs text-muted-foreground">Redis</p>
       </CardHeader>
-      <CardContent className="mt-auto space-y-2 text-xs text-muted-foreground">
+      <CardContent className="mt-auto space-y-3 text-xs text-muted-foreground">
         {endpoint ? (
           <RevealableInput
             value={endpoint}
             readOnly
             className="font-mono text-xs"
-            onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <p className="px-0.5 text-muted-foreground">
@@ -175,6 +190,7 @@ function RedisInstanceCard({
             </span>
           )}
         </div>
+
         {instance.lastError && (
           <p className="rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-destructive">
             {instance.lastError}
@@ -182,6 +198,173 @@ function RedisInstanceCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function ClientsDialog({
+  instance,
+  open,
+  onOpenChange,
+}: {
+  instance: RedisInstanceWithEnv | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const clientsQuery = useQuery({
+    queryKey: ["redis-clients", instance?.id],
+    queryFn: () =>
+      rpcClient.redis.getClients({ redisInstanceId: instance!.id }),
+    enabled: open && !!instance,
+    refetchInterval: open ? 5000 : false,
+  });
+
+  const clients = clientsQuery.data ?? [];
+
+  const uniqueIps = Array.from(
+    clients.reduce((map, client) => {
+      const ip = client.addr.split(":")[0] ?? client.addr;
+      map.set(ip, (map.get(ip) ?? 0) + 1);
+      return map;
+    }, new Map<string, number>()),
+  ).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[80vh] w-[90vw] max-w-7xl flex-col gap-0 overflow-hidden p-0 sm:max-w-7xl overscroll-none">
+        <DialogHeader className="border-b px-5 py-4">
+          <DialogTitle>Connected clients</DialogTitle>
+          <DialogDescription>
+            {instance?.nickname} · {clients.length} client
+            {clients.length !== 1 ? "s" : ""} · refreshes every 5s
+          </DialogDescription>
+        </DialogHeader>
+
+        {clientsQuery.isLoading ? (
+          <div className="grid grid-cols-[1fr_auto] divide-x">
+            <div className="space-y-px p-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full rounded" />
+              ))}
+            </div>
+            <div className="w-56 space-y-px p-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full rounded" />
+              ))}
+            </div>
+          </div>
+        ) : clients.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <UsersIcon className="size-6 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
+              No clients connected
+            </p>
+          </div>
+        ) : (
+          <div className="grid min-h-0 flex-1 grid-cols-[1fr_auto] divide-x overflow-hidden">
+            <div className="overflow-y-auto overscroll-none">
+              <table className="w-full table-fixed text-xs">
+                <colgroup>
+                  <col className="w-24" />
+                  <col className="w-56" />
+                  <col className="w-20" />
+                  <col className="w-20" />
+                  <col className="w-16" />
+                  <col className="w-16" />
+                  <col className="w-12" />
+                </colgroup>
+                <thead>
+                  <tr className="sticky top-0 border-b bg-muted/60 backdrop-blur">
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">
+                      Address
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">
+                      Name
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">
+                      Command
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      ID
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      Age
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      Idle
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      DB
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {clients.map((client) => (
+                    <tr key={client.id} className="hover:bg-muted/30">
+                      <td className="truncate px-4 py-2 font-mono">
+                        {client.addr}
+                      </td>
+                      <td className="truncate px-4 py-2 font-mono text-muted-foreground">
+                        {client.name || "—"}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 font-mono text-[10px]",
+                            client.cmd === "subscribe" ||
+                              client.cmd === "psubscribe"
+                              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {client.cmd || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono text-muted-foreground">
+                        {client.id}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {client.age}s
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {client.idle}s
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {client.db}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="w-56 overflow-y-auto overscroll-none">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="sticky top-0 border-b bg-muted/60 backdrop-blur">
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">
+                      IP
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      Conns
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {uniqueIps.map(([ip, count]) => (
+                    <tr key={ip} className="hover:bg-muted/30">
+                      <td className="px-4 py-2 font-mono">{ip}</td>
+                      <td className="px-4 py-2 text-right font-mono text-muted-foreground">
+                        {count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -193,6 +376,9 @@ function ConnectionsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<"create" | "edit">("create");
   const [editingInstance, setEditingInstance] =
+    useState<RedisInstanceWithEnv | null>(null);
+  const [clientsSheetOpen, setClientsSheetOpen] = useState(false);
+  const [clientsInstance, setClientsInstance] =
     useState<RedisInstanceWithEnv | null>(null);
 
   const workspacesQuery = useQuery({
@@ -207,8 +393,7 @@ function ConnectionsPage() {
 
   const activeEnvironment = envsQuery.data?.find((e) => e.id === environmentId);
   const workspace = workspacesQuery.data?.find((w) => w.id === workspaceId);
-  const canManage =
-    workspace?.role === "owner" || workspace?.role === "admin";
+  const canManage = workspace?.role === "owner" || workspace?.role === "admin";
 
   const redisQuery = useQuery({
     queryKey: ["redis", environmentId],
@@ -225,7 +410,9 @@ function ConnectionsPage() {
     }))
     .sort((a, b) => a.nickname.localeCompare(b.nickname));
 
-  const connectedCount = instances.filter((i) => i.status === "connected").length;
+  const connectedCount = instances.filter(
+    (i) => i.status === "connected",
+  ).length;
   const isRedisLoading = envsQuery.isLoading || redisQuery.isLoading;
   const isRedisFetching = redisQuery.isFetching;
 
@@ -244,6 +431,11 @@ function ConnectionsPage() {
   const closeSheet = () => {
     setSheetOpen(false);
     setEditingInstance(null);
+  };
+
+  const openClientsSheet = (instance: RedisInstanceWithEnv) => {
+    setClientsInstance(instance);
+    setClientsSheetOpen(true);
   };
 
   const handleFormSuccess = async () => {
@@ -280,8 +472,7 @@ function ConnectionsPage() {
     return (
       <div className="p-6">
         <p className="text-sm text-muted-foreground">
-          No environment found. Create an environment to add queue
-          connections.
+          No environment found. Create an environment to add queue connections.
         </p>
       </div>
     );
@@ -372,6 +563,7 @@ function ConnectionsPage() {
                     instance={instance}
                     canManage={canManage}
                     onEdit={() => openEditSheet(instance)}
+                    onClients={() => openClientsSheet(instance)}
                   />
                 </li>
               ))}
@@ -399,6 +591,12 @@ function ConnectionsPage() {
             ? handleDeleteInstance
             : undefined
         }
+      />
+
+      <ClientsDialog
+        instance={clientsInstance}
+        open={clientsSheetOpen}
+        onOpenChange={setClientsSheetOpen}
       />
     </div>
   );

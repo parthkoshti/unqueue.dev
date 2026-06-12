@@ -19,6 +19,7 @@
     "@tanstack/react-router": "^1.170.8",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.26",
+    "@unqueue/bullmq": "workspace:*",
     "@unqueue/orpc": "workspace:*",
     "@unqueue/shared": "workspace:*",
     "@unqueue/ui": "workspace:*",

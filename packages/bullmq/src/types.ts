@@ -1,3 +1,14 @@
+export type ParsedLog = {
+  format: "json" | "raw";
+  entry?: {
+    ts: number;
+    level: string;
+    message: string;
+    metadata?: Record<string, unknown>;
+  };
+  raw?: string;
+};
+
 export type JobSummary = {
   id: string;
   name: string;
@@ -19,6 +30,12 @@ export type JobSummary = {
     removeOnComplete?: unknown;
     removeOnFail?: unknown;
   };
+};
+
+export type JobDetail = JobSummary & {
+  payload: unknown;
+  progress: unknown;
+  logs: ParsedLog[];
 };
 
 export type QueueCounts = {

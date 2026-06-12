@@ -161,9 +161,7 @@ export function formatElapsedMs(ms: number) {
   const hours = Math.floor(ms / 3_600_000);
   const afterHoursMs = ms % 3_600_000;
   const mins = Math.floor(afterHoursMs / 60_000);
-  const secsMs = afterHoursMs % 60_000;
-  if (secsMs < 1000) return `${hours}h ${mins}m`;
-  return `${hours}h ${mins}m ${formatSecondPart(secsMs, true)}`;
+  return `${hours}h ${mins}m`;
 }
 
 export function formatStartDelayMs(ms: number) {

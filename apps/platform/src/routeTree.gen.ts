@@ -18,6 +18,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite/$token'
 import { Route as WorkspaceIdConnectionsRouteImport } from './routes/$workspaceId/connections'
 import { Route as WorkspaceIdBookmarksRouteImport } from './routes/$workspaceId/bookmarks'
 import { Route as WorkspaceIdEnvironmentIdRouteImport } from './routes/$workspaceId/$environmentId'
+import { Route as WorkspaceIdSettingsIndexRouteImport } from './routes/$workspaceId/settings/index'
 import { Route as WorkspaceIdEnvironmentIdIndexRouteImport } from './routes/$workspaceId/$environmentId/index'
 import { Route as WorkspaceIdSettingsMembersRouteImport } from './routes/$workspaceId/settings/members'
 import { Route as WorkspaceIdSettingsEnvironmentsRouteImport } from './routes/$workspaceId/settings/environments'
@@ -70,6 +71,12 @@ const WorkspaceIdEnvironmentIdRoute =
     path: '/$environmentId',
     getParentRoute: () => WorkspaceIdRoute,
   } as any)
+const WorkspaceIdSettingsIndexRoute =
+  WorkspaceIdSettingsIndexRouteImport.update({
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => WorkspaceIdRoute,
+  } as any)
 const WorkspaceIdEnvironmentIdIndexRoute =
   WorkspaceIdEnvironmentIdIndexRouteImport.update({
     id: '/',
@@ -115,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
   '/$workspaceId/$environmentId/': typeof WorkspaceIdEnvironmentIdIndexRoute
+  '/$workspaceId/settings/': typeof WorkspaceIdSettingsIndexRoute
   '/$workspaceId/$environmentId/queues/$queueName': typeof WorkspaceIdEnvironmentIdQueuesQueueNameRoute
 }
 export interface FileRoutesByTo {
@@ -130,6 +138,7 @@ export interface FileRoutesByTo {
   '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
   '/$workspaceId/$environmentId': typeof WorkspaceIdEnvironmentIdIndexRoute
+  '/$workspaceId/settings': typeof WorkspaceIdSettingsIndexRoute
   '/$workspaceId/$environmentId/queues/$queueName': typeof WorkspaceIdEnvironmentIdQueuesQueueNameRoute
 }
 export interface FileRoutesById {
@@ -147,6 +156,7 @@ export interface FileRoutesById {
   '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
   '/$workspaceId/$environmentId/': typeof WorkspaceIdEnvironmentIdIndexRoute
+  '/$workspaceId/settings/': typeof WorkspaceIdSettingsIndexRoute
   '/$workspaceId/$environmentId/queues/$queueName': typeof WorkspaceIdEnvironmentIdQueuesQueueNameRoute
 }
 export interface FileRouteTypes {
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
     | '/$workspaceId/$environmentId/'
+    | '/$workspaceId/settings/'
     | '/$workspaceId/$environmentId/queues/$queueName'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
     | '/$workspaceId/$environmentId'
+    | '/$workspaceId/settings'
     | '/$workspaceId/$environmentId/queues/$queueName'
   id:
     | '__root__'
@@ -196,6 +208,7 @@ export interface FileRouteTypes {
     | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
     | '/$workspaceId/$environmentId/'
+    | '/$workspaceId/settings/'
     | '/$workspaceId/$environmentId/queues/$queueName'
   fileRoutesById: FileRoutesById
 }
@@ -273,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceIdEnvironmentIdRouteImport
       parentRoute: typeof WorkspaceIdRoute
     }
+    '/$workspaceId/settings/': {
+      id: '/$workspaceId/settings/'
+      path: '/settings'
+      fullPath: '/$workspaceId/settings/'
+      preLoaderRoute: typeof WorkspaceIdSettingsIndexRouteImport
+      parentRoute: typeof WorkspaceIdRoute
+    }
     '/$workspaceId/$environmentId/': {
       id: '/$workspaceId/$environmentId/'
       path: '/'
@@ -335,6 +355,7 @@ interface WorkspaceIdRouteChildren {
   WorkspaceIdSettingsAlertsRoute: typeof WorkspaceIdSettingsAlertsRoute
   WorkspaceIdSettingsEnvironmentsRoute: typeof WorkspaceIdSettingsEnvironmentsRoute
   WorkspaceIdSettingsMembersRoute: typeof WorkspaceIdSettingsMembersRoute
+  WorkspaceIdSettingsIndexRoute: typeof WorkspaceIdSettingsIndexRoute
 }
 
 const WorkspaceIdRouteChildren: WorkspaceIdRouteChildren = {
@@ -344,6 +365,7 @@ const WorkspaceIdRouteChildren: WorkspaceIdRouteChildren = {
   WorkspaceIdSettingsAlertsRoute: WorkspaceIdSettingsAlertsRoute,
   WorkspaceIdSettingsEnvironmentsRoute: WorkspaceIdSettingsEnvironmentsRoute,
   WorkspaceIdSettingsMembersRoute: WorkspaceIdSettingsMembersRoute,
+  WorkspaceIdSettingsIndexRoute: WorkspaceIdSettingsIndexRoute,
 }
 
 const WorkspaceIdRouteWithChildren = WorkspaceIdRoute._addFileChildren(

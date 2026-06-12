@@ -1,11 +1,9 @@
 import type * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { BrandmarkIcon } from "@/components/logo";
-import { EnvironmentSwitcher } from "@/components/environment-switcher";
 import { NavMain } from "@/components/nav-main";
 import { NavQueues } from "@/components/nav-queues";
 import { NavSettings } from "@/components/nav-settings";
-import { NavThemeToggle } from "@/components/nav-theme-toggle";
 import { NavUser } from "@/components/nav-user";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import {
@@ -14,6 +12,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 
 export function AppSidebar({
@@ -36,7 +35,7 @@ export function AppSidebar({
             className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
             <BrandmarkIcon size={32} />
-            <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
+            <span className="truncate font-mono text-sm font-semibold group-data-[collapsible=icon]:hidden">
               Unqueue
             </span>
           </Link>
@@ -46,18 +45,12 @@ export function AppSidebar({
             className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
             <BrandmarkIcon size={32} />
-            <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
+            <span className="truncate font-mono text-sm font-semibold group-data-[collapsible=icon]:hidden">
               Unqueue
             </span>
           </Link>
         )}
         {workspaceId && <WorkspaceSwitcher workspaceId={workspaceId} />}
-        {hasNavigationContext && (
-          <EnvironmentSwitcher
-            workspaceId={workspaceId}
-            environmentId={environmentId}
-          />
-        )}
       </SidebarHeader>
       <SidebarContent>
         {hasNavigationContext ? (
@@ -68,9 +61,11 @@ export function AppSidebar({
           </>
         ) : null}
       </SidebarContent>
-      <SidebarFooter>
-        <NavThemeToggle />
-        <NavUser />
+      <SidebarFooter className="gap-0 p-0">
+        <SidebarSeparator className="mx-0" />
+        <div className="p-2">
+          <NavUser />
+        </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

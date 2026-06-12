@@ -1,49 +1,24 @@
 import { useSocketStatus } from "@/hooks/use-socket-status";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
 
 const statusConfig = {
-  connected: {
-    tooltip: "Realtime: connected",
-    color: "bg-green-500",
-    ping: true,
-  },
-  connecting: {
-    tooltip: "Realtime: connecting…",
-    color: "bg-yellow-500",
-    ping: true,
-  },
-  disconnected: {
-    tooltip: "Realtime: disconnected",
-    color: "bg-red-500",
-    ping: false,
-  },
+  connected: { label: "Realtime: connected", color: "bg-green-500", ping: true },
+  connecting: { label: "Realtime: connecting…", color: "bg-yellow-500", ping: true },
+  disconnected: { label: "Realtime: disconnected", color: "bg-red-500", ping: false },
 };
 
-export function NavRealtimeStatus() {
+export function RealtimeStatusIndicator() {
   const status = useSocketStatus();
-  const { tooltip, color, ping } = statusConfig[status];
+  const { label, color, ping } = statusConfig[status];
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          tooltip={tooltip}
-          className="pointer-events-none cursor-default"
-        >
-          <span className="relative flex size-4 items-center justify-center shrink-0">
-            {ping && (
-              <span
-                className={`absolute inline-flex size-full animate-ping rounded-full opacity-75 ${color}`}
-              />
-            )}
-            <span className={`relative inline-flex size-2.5 rounded-full ${color}`} />
-          </span>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    </SidebarMenu>
+    <span className="flex items-center gap-1.5 text-xs text-muted-foreground" title={label}>
+      <span className="relative flex size-1.5 shrink-0">
+        {ping && (
+          <span className={`absolute inset-0 animate-ping rounded-full opacity-75 ${color}`} />
+        )}
+        <span className={`relative size-1.5 rounded-full ${color}`} />
+      </span>
+      <span>Realtime</span>
+    </span>
   );
 }

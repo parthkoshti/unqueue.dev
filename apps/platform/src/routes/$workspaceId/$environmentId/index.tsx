@@ -30,7 +30,6 @@ import {
 } from "@unqueue/ui/components/card";
 import { RoutePending } from "@/lib/route-pending";
 import { RedisConnectionSheet } from "@/components/redis-connection-sheet";
-import { RedisStatusBar } from "@/components/redis-status-bar";
 import {
   environmentQueuesForceRefreshOptions,
   environmentQueuesQueryOptions,
@@ -207,10 +206,6 @@ function EnvironmentOverview() {
           )}
         </div>
       </ScrollArea>
-
-      {redisInstances.length > 0 && (
-        <RedisStatusBar environmentId={environmentId} />
-      )}
 
       <RedisConnectionSheet
         open={connectionSheetOpen}

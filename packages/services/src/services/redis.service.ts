@@ -332,6 +332,49 @@ export function createRedisService(deps: ServiceDeps, logger: Logger) {
       return { ok: true as const };
     },
 
+    async getClients(
+      actor: Actor,
+      input: { redisInstanceId: string },
+    ) {
+      await assertRedisInstanceAccess(
+        deps.db,
+        actor.userId,
+        input.redisInstanceId,
+        "viewer",
+      );
+
+      if (!deps.realtime.hasInstance(input.redisInstanceId)) {
+        return [];
+      }
+
+      const { connection } = deps.realtime.getConnection(input.redisInstanceId);
+      const raw = await connection.call("CLIENT", "LIST") as string;
+
+      return raw
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => {
+          const fields: Record<string, string> = {};
+          for (const part of line.split(" ")) {
+            const eq = part.indexOf("=");
+            if (eq !== -1) {
+              fields[part.slice(0, eq)] = part.slice(eq + 1);
+            }
+          }
+          return {
+            id: fields["id"] ?? "",
+            addr: fields["addr"] ?? "",
+            name: fields["name"] || null,
+            cmd: fields["cmd"] ?? "",
+            age: fields["age"] ? parseInt(fields["age"], 10) : 0,
+            idle: fields["idle"] ? parseInt(fields["idle"], 10) : 0,
+            flags: fields["flags"] ?? "",
+            db: fields["db"] ? parseInt(fields["db"], 10) : 0,
+          };
+        });
+    },
+
     async getClientCounts(actor: Actor, environmentId: string) {
       await assertEnvironmentAccess(
         deps.db,

@@ -12,17 +12,16 @@ export {
   listJobIds,
   type JobState,
   type JobListState,
+  getJob,
   getJobState,
-  getJobPayload,
-  getJobProgress,
-  getJobLogs,
   toJobSummary,
-  type ParsedLog,
 } from "./queue-service.js";
 export * from "./actions.js";
 export { MetricsAggregator, type QueueMetrics, type WindowKey } from "./metrics.js";
 export type {
   JobSummary,
+  JobDetail,
+  ParsedLog,
   QueueCounts,
   QueueMeta,
   RedisInstanceConfig,

@@ -10,6 +10,26 @@ import {
   CommandList,
 } from "@unqueue/ui/components/command";
 import { environmentQueuesQueryOptions } from "@/lib/environment-queues-query";
+import type { EnvironmentQueueRow } from "@/components/environment-queues-table";
+import { cn } from "@/lib/utils";
+
+type QueueHealth = "failed" | "paused" | "backlog" | "active" | "idle";
+
+const HEALTH_DOT: Record<QueueHealth, string> = {
+  failed: "bg-destructive",
+  paused: "bg-amber-500",
+  backlog: "bg-sky-500",
+  active: "bg-blue-500",
+  idle: "bg-emerald-500/50",
+};
+
+function getQueueHealth(queue: EnvironmentQueueRow): QueueHealth {
+  if (queue.counts.failed > 0) return "failed";
+  if (queue.isPaused) return "paused";
+  if (queue.counts.waiting + queue.counts.delayed >= 10) return "backlog";
+  if (queue.counts.active > 0) return "active";
+  return "idle";
+}
 
 export function CommandPalette({
   workspaceId,
@@ -144,6 +164,7 @@ export function CommandPalette({
                 )
               }
             >
+              <span className={cn("size-1.5 shrink-0 rounded-full", HEALTH_DOT[getQueueHealth(queue)])} />
               {queue.name}
               {queue.counts.failed > 0 && (
                 <span className="ml-auto text-xs text-destructive">

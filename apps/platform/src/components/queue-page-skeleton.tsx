@@ -11,7 +11,7 @@ function QueueMetricsPanelSkeleton() {
     <div className="shrink-0 space-y-4 border-b py-4">
       <div className="flex flex-wrap gap-1.5 px-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-7 w-24 rounded-full" />
+          <Skeleton key={i} className="h-6 w-24 rounded-full" />
         ))}
       </div>
       <div className="grid w-full grid-cols-2 gap-0 sm:grid-cols-4">
@@ -24,7 +24,7 @@ function QueueMetricsPanelSkeleton() {
             )}
           >
             <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-7 w-20" />
+            <Skeleton className="h-8 w-20" />
             <Skeleton className="h-3 w-14" />
           </div>
         ))}
@@ -50,18 +50,10 @@ function QueueStateTabsSkeleton() {
               <Skeleton className="h-3 w-14" />
               <Skeleton className="size-3.5 rounded-sm" />
             </div>
-            <Skeleton className="h-4 w-14 rounded-sm" />
+            <Skeleton className="h-3.5 w-14 rounded-sm" />
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function QueueJobsFooterSkeleton() {
-  return (
-    <div className="flex shrink-0 items-center justify-between border-t border-border bg-muted/20 px-4 py-2.5 text-xs">
-      <Skeleton className="h-3.5 w-32" />
     </div>
   );
 }
@@ -79,14 +71,9 @@ export function QueuePageSkeleton({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-none">
           <QueueJobsTableSkeleton rows={tableRows} />
         </div>
-        <QueueJobsFooterSkeleton />
       </div>
     </>
   );
 }
 
-export {
-  QueueMetricsPanelSkeleton,
-  QueueStateTabsSkeleton,
-  QueueJobsFooterSkeleton,
-};
+export { QueueMetricsPanelSkeleton, QueueStateTabsSkeleton };

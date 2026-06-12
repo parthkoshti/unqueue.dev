@@ -3,7 +3,7 @@ import type { RedisConnection } from "./redis-types.js";
 import { withQueue } from "./queue-runner.js";
 import type { QueuePoolContext } from "./queue-pool-context.js";
 import { jobLogSchema } from "@unqueue/validators";
-import type { JobSummary, QueueCounts, QueueMeta } from "./types.js";
+import type { JobDetail, JobSummary, ParsedLog, QueueCounts, QueueMeta } from "./types.js";
 
 export async function getQueueMeta(
   connection: RedisConnection,
@@ -218,57 +218,31 @@ export async function getJobState(
   return withQueue(connection, queueName, prefix, async (queue) => {
     const job = await queue.getJob(jobId);
     if (!job) return null;
+    const state = await job.getState();
+    return { ...toJobSummary(job), state };
+  });
+}
+
+export async function getJob(
+  connection: RedisConnection,
+  queueName: string,
+  prefix: string,
+  jobId: string,
+): Promise<JobDetail | null> {
+  return withQueue(connection, queueName, prefix, async (queue) => {
+    const [job, logsResult] = await Promise.all([
+      queue.getJob(jobId),
+      queue.getJobLogs(jobId),
+    ]);
+    if (!job) return null;
     const jobState = await job.getState();
-    return { ...toJobSummary(job), state: jobState };
-  });
-}
-
-export async function getJobPayload(
-  connection: RedisConnection,
-  queueName: string,
-  prefix: string,
-  jobId: string,
-): Promise<unknown> {
-  return withQueue(connection, queueName, prefix, async (queue) => {
-    const job = await queue.getJob(jobId);
-    if (!job) return null;
-    return job.data;
-  });
-}
-
-export async function getJobProgress(
-  connection: RedisConnection,
-  queueName: string,
-  prefix: string,
-  jobId: string,
-): Promise<unknown> {
-  return withQueue(connection, queueName, prefix, async (queue) => {
-    const job = await queue.getJob(jobId);
-    if (!job) return null;
-    return job.progress;
-  });
-}
-
-export type ParsedLog = {
-  format: "json" | "raw";
-  entry?: {
-    ts: number;
-    level: string;
-    message: string;
-    metadata?: Record<string, unknown>;
-  };
-  raw?: string;
-};
-
-export async function getJobLogs(
-  connection: RedisConnection,
-  queueName: string,
-  prefix: string,
-  jobId: string,
-): Promise<ParsedLog[]> {
-  return withQueue(connection, queueName, prefix, async (queue) => {
-    const { logs } = await queue.getJobLogs(jobId);
-    return logs.map(parseLogLine);
+    return {
+      ...toJobSummary(job),
+      state: jobState,
+      payload: job.data,
+      progress: job.progress,
+      logs: logsResult.logs.map(parseLogLine),
+    };
   });
 }
 

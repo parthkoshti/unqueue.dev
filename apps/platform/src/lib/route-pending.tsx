@@ -37,8 +37,17 @@ function RoutePendingContent() {
     return (
       <div className="flex h-full flex-col">
         <div className="flex shrink-0 items-center justify-between gap-4 border-b px-4 py-3">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="size-8 rounded-md" />
+          <div className="flex items-center gap-2.5">
+            <Skeleton className="size-2 rounded-full" />
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-5 w-24 rounded-md" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-7 w-16 rounded-md" />
+            ))}
+            <Skeleton className="h-7 w-20 rounded-md" />
+          </div>
         </div>
         <QueuePageSkeleton />
       </div>

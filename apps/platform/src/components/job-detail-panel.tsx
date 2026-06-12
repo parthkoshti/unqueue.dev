@@ -3,9 +3,9 @@ import { BookmarkIcon, CheckIcon, CopyIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BookmarkFolderPicker } from "@/components/bookmark-folder-picker";
 import { rpcClient } from "@/lib/api";
+import type { ParsedLog } from "@unqueue/bullmq";
 import { cn } from "@/lib/utils";
 import {
-  getSocket,
   onSocketEvent,
   subscribeRooms,
   unsubscribeRooms,
@@ -101,23 +101,7 @@ export function JobDetailPanel({
 }) {
   const queryClient = useQueryClient();
   const [bookmarkPickerOpen, setBookmarkPickerOpen] = useState(false);
-  const [socketConnected, setSocketConnected] = useState(() =>
-    getSocket().connected,
-  );
   const jobInvalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const socket = getSocket();
-    const onConnect = () => setSocketConnected(true);
-    const onDisconnect = () => setSocketConnected(false);
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    setSocketConnected(socket.connected);
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-    };
-  }, []);
 
   const jobRoom = `job:${redisInstanceId}:${queueName}:${jobId}`;
 
@@ -132,12 +116,6 @@ export function JobDetailPanel({
           void queryClient.invalidateQueries({
             queryKey: ["job", redisInstanceId, queueName, jobId],
           });
-          void queryClient.invalidateQueries({
-            queryKey: ["job-progress", redisInstanceId, queueName, jobId],
-          });
-          void queryClient.invalidateQueries({
-            queryKey: ["job-logs", redisInstanceId, queueName, jobId],
-          });
         }, 500);
       }
     });
@@ -149,30 +127,9 @@ export function JobDetailPanel({
     };
   }, [jobRoom, jobId, queueName, queryClient, redisInstanceId]);
 
-  const pollInterval = socketConnected ? false : 2000;
-
   const jobQuery = useQuery({
     queryKey: ["job", redisInstanceId, queueName, jobId],
     queryFn: () => rpcClient.job.get({ redisInstanceId, queueName, jobId }),
-  });
-
-  const payloadQuery = useQuery({
-    queryKey: ["job-payload", redisInstanceId, queueName, jobId],
-    queryFn: () =>
-      rpcClient.job.getPayload({ redisInstanceId, queueName, jobId }),
-  });
-
-  const progressQuery = useQuery({
-    queryKey: ["job-progress", redisInstanceId, queueName, jobId],
-    queryFn: () =>
-      rpcClient.job.getProgress({ redisInstanceId, queueName, jobId }),
-    refetchInterval: pollInterval,
-  });
-
-  const logsQuery = useQuery({
-    queryKey: ["job-logs", redisInstanceId, queueName, jobId],
-    queryFn: () => rpcClient.job.getLogs({ redisInstanceId, queueName, jobId }),
-    refetchInterval: pollInterval,
   });
 
   const invalidateJob = () => {
@@ -412,27 +369,27 @@ export function JobDetailPanel({
 
           <section>
             <h3 className="mb-2 font-medium text-muted-foreground">Progress</h3>
-            {progressQuery.isLoading ? (
+            {jobQuery.isLoading ? (
               <CodeBlockSkeleton lines={3} />
-            ) : progressQuery.data &&
-              typeof progressQuery.data === "object" &&
-              progressQuery.data !== null &&
-              Object.keys(progressQuery.data).length > 0 ? (
+            ) : job?.progress &&
+              typeof job.progress === "object" &&
+              job.progress !== null &&
+              Object.keys(job.progress).length > 0 ? (
               <div className="space-y-2">
-                {"currentStep" in progressQuery.data && (
+                {"currentStep" in job.progress && (
                   <DetailRow label="Step">
-                    {String((progressQuery.data as { currentStep?: string }).currentStep)}
+                    {String((job.progress as { currentStep?: string }).currentStep)}
                   </DetailRow>
                 )}
-                {"percent" in progressQuery.data && (
+                {"percent" in job.progress && (
                   <DetailRow label="Percent">
-                    {(progressQuery.data as { percent?: number }).percent}%
+                    {(job.progress as { percent?: number }).percent}%
                   </DetailRow>
                 )}
-                {"steps" in progressQuery.data &&
-                  Array.isArray((progressQuery.data as { steps?: unknown[] }).steps) &&
+                {"steps" in job.progress &&
+                  Array.isArray((job.progress as { steps?: unknown[] }).steps) &&
                   (
-                    progressQuery.data as {
+                    job.progress as {
                       steps: Array<{ name: string; status: string }>;
                     }
                   ).steps.map((step) => (
@@ -441,10 +398,10 @@ export function JobDetailPanel({
                       <span>{step.name}</span>
                     </div>
                   ))}
-                {!("currentStep" in progressQuery.data) &&
-                  !("percent" in progressQuery.data) &&
-                  !("steps" in progressQuery.data) && (
-                    <CodeBlock value={progressQuery.data} />
+                {!("currentStep" in job.progress) &&
+                  !("percent" in job.progress) &&
+                  !("steps" in job.progress) && (
+                    <CodeBlock value={job.progress} />
                   )}
               </div>
             ) : (
@@ -456,12 +413,12 @@ export function JobDetailPanel({
 
           <section>
             <h3 className="mb-2 font-medium text-muted-foreground">Payload</h3>
-            {payloadQuery.isLoading ? (
+            {jobQuery.isLoading ? (
               <CodeBlockSkeleton lines={6} />
-            ) : payloadQuery.data == null ? (
+            ) : job?.payload == null ? (
               <p className="text-muted-foreground">No payload</p>
             ) : (
-              <CodeBlock value={payloadQuery.data} />
+              <CodeBlock value={job.payload} />
             )}
           </section>
 
@@ -469,16 +426,16 @@ export function JobDetailPanel({
 
           <section>
             <h3 className="mb-2 font-medium text-muted-foreground">
-              Logs {(logsQuery.data?.length ?? 0) > 0 && `(${logsQuery.data?.length})`}
+              Logs {(job?.logs.length ?? 0) > 0 && `(${job?.logs.length})`}
             </h3>
-            {logsQuery.isLoading ? (
+            {jobQuery.isLoading ? (
               <CodeBlockSkeleton lines={5} />
-            ) : (logsQuery.data ?? []).length === 0 ? (
+            ) : (job?.logs ?? []).length === 0 ? (
               <p className="text-muted-foreground">No logs</p>
             ) : (
               <CodeBlock
-                code={(logsQuery.data ?? [])
-                  .map((log) =>
+                code={(job?.logs ?? [])
+                  .map((log: ParsedLog) =>
                     log.format === "json" && log.entry
                       ? `[${log.entry.level}] ${log.entry.message}`
                       : (log.raw ?? ""),
