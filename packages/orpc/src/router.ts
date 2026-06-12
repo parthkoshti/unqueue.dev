@@ -184,6 +184,13 @@ const redisRouter = {
     .handler(async ({ context, input }) => {
       return context.services.redis.delete(toActor(context), input.id);
     }),
+
+  getClientCounts: base
+    .input(z.object({ environmentId: z.string().length(24) }))
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.redis.getClientCounts(toActor(context), input.environmentId);
+    }),
 };
 
 const metricsWindowSchema = z.enum(["1m", "5m", "15m", "1h", "24h", "7d"]);
@@ -246,6 +253,30 @@ const queueRouter = {
 };
 
 const jobRouter = {
+  listIds: base
+    .input(
+      z.object({
+        redisInstanceId: z.string().length(24),
+        queueName: z.string(),
+        state: z.enum([
+          "all",
+          "waiting",
+          "active",
+          "delayed",
+          "completed",
+          "failed",
+          "paused",
+          "prioritized",
+          "waiting-children",
+          "schedulers",
+        ]),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.job.listIds(toActor(context), input);
+    }),
+
   list: base
     .input(
       z.object({

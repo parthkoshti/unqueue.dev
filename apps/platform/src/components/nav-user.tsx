@@ -51,10 +51,10 @@ export function NavUser() {
 
   const initials = user.name
     ?.split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+    ?.map((part) => part[0])
+    ?.join("")
+    ?.slice(0, 2)
+    ?.toUpperCase() ?? "";
 
   return (
     <SidebarMenu>
@@ -65,9 +65,9 @@ export function NavUser() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.image ?? undefined} alt={user.name} />
-                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+              <Avatar className="h-8 w-8 !rounded-md after:!rounded-md">
+                <AvatarImage src={user.image ?? undefined} alt={user.name} className="!rounded-md" />
+                <AvatarFallback className="!rounded-md">{initials}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>

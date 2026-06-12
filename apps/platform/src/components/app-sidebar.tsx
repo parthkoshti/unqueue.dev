@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { Link } from "@tanstack/react-router";
+import { BrandmarkIcon } from "@/components/logo";
 import { EnvironmentSwitcher } from "@/components/environment-switcher";
 import { NavMain } from "@/components/nav-main";
 import { NavQueues } from "@/components/nav-queues";
@@ -34,9 +35,7 @@ export function AppSidebar({
             params={{ workspaceId, environmentId }}
             className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-              U
-            </div>
+            <BrandmarkIcon size={32} />
             <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
               Unqueue
             </span>
@@ -46,9 +45,7 @@ export function AppSidebar({
             to="/"
             className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-              U
-            </div>
+            <BrandmarkIcon size={32} />
             <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
               Unqueue
             </span>

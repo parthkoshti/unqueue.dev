@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { CommandPalette } from "@/components/command-palette";
+import { ErrorBoundary, SilentErrorBoundary } from "@/components/error-boundary";
 import { NavSearch } from "@/components/nav-search";
 import { PageBreadcrumbs } from "@/components/page-breadcrumbs";
 import { ShellLayoutProvider, ShellProvider } from "@/components/shell-context";
@@ -16,6 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const { workspaceId, environmentId, hasNavigationContext } =
     useShellContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
     <ShellLayoutProvider>
@@ -28,10 +31,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <TooltipProvider>
           <SidebarProvider>
-            <AppSidebar
-              workspaceId={workspaceId}
-              environmentId={environmentId}
-            />
+            <SilentErrorBoundary>
+              <AppSidebar
+                workspaceId={workspaceId}
+                environmentId={environmentId}
+              />
+            </SilentErrorBoundary>
             <SidebarInset className="flex h-svh flex-col overflow-hidden overscroll-none">
               <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
                 <SidebarTrigger className="-ml-1" />
@@ -43,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </header>
               <main className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-y-none">
-                {children}
+                <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>
               </main>
             </SidebarInset>
             {hasNavigationContext && workspaceId && environmentId && (

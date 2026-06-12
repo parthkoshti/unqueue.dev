@@ -85,6 +85,7 @@ function QueuePage() {
   const isFetchingNextPageRef = useRef(false);
   const hasNextPageRef = useRef(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectingAll, setSelectingAll] = useState(false);
   const [metricsWindow, setMetricsWindow] = useState<
     "1m" | "1h" | "24h" | "7d"
   >("1h");
@@ -98,6 +99,7 @@ function QueuePage() {
 
   useEffect(() => {
     setSelected(new Set());
+    setSelectingAll(false);
   }, [state]);
 
   const { workspaceRole } = useShellContext();
@@ -253,6 +255,20 @@ function QueuePage() {
     });
   };
 
+  const selectAll = async () => {
+    setSelectingAll(true);
+    try {
+      const ids = await rpcClient.job.listIds({
+        redisInstanceId,
+        queueName,
+        state: state === "latest" ? "all" : state,
+      });
+      setSelected(new Set(ids));
+    } finally {
+      setSelectingAll(false);
+    }
+  };
+
   const bulkRetry = async () => {
     await rpcClient.jobActions.bulkRetry({
       redisInstanceId,
@@ -406,22 +422,59 @@ function QueuePage() {
         onStateChange={selectState}
       />
 
-      {selected.size > 0 && (
-        <div className="flex shrink-0 items-center gap-1.5 border-b px-4 py-2">
-          <Button size="sm" variant="outline" onClick={() => void bulkRetry()}>
-            <RotateCcwIcon />
-            Retry ({selected.size})
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => void bulkRemove()}
-          >
-            <Trash2Icon />
-            Remove ({selected.size})
-          </Button>
-        </div>
-      )}
+      {(() => {
+        const hasSelection = selected.size > 0;
+        const allMatchSelected = selected.size >= stateCount && stateCount > 0;
+        return (
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-b px-4 py-2">
+            <div className="flex items-center gap-3 text-xs">
+              {hasSelection ? (
+                <>
+                  <span className="text-muted-foreground">
+                    {selected.size.toLocaleString()} selected
+                  </span>
+                  {!allMatchSelected ? (
+                    <button
+                      type="button"
+                      disabled={selectingAll}
+                      className="flex items-center gap-1 text-primary underline-offset-2 hover:underline disabled:opacity-50"
+                      onClick={() => void selectAll()}
+                    >
+                      {selectingAll && <RefreshCwIcon className="size-3 animate-spin" />}
+                      Select all {stateCount.toLocaleString()}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-muted-foreground underline-offset-2 hover:underline"
+                      onClick={() => setSelected(new Set())}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span className="text-muted-foreground/50">No jobs selected</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button size="sm" variant="outline" disabled={!hasSelection} onClick={() => void bulkRetry()}>
+                <RotateCcwIcon />
+                Retry {hasSelection ? `(${selected.size})` : ""}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={!hasSelection}
+                onClick={() => void bulkRemove()}
+              >
+                <Trash2Icon />
+                Remove {hasSelection ? `(${selected.size})` : ""}
+              </Button>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t bg-card">
         <div

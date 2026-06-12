@@ -170,6 +170,45 @@ export function toJobSummary(job: Job): JobSummary {
   };
 }
 
+export async function listJobIds(
+  connection: RedisConnection,
+  queueName: string,
+  prefix: string,
+  state: JobListState,
+): Promise<string[]> {
+  if (state === "schedulers") return [];
+
+  const k = (s: string) => `${prefix}:${queueName}:${s}`;
+
+  if (state === "all") {
+    const pipeline = connection.pipeline();
+    pipeline.lrange(k("wait"), 0, -1);
+    pipeline.lrange(k("active"), 0, -1);
+    pipeline.lrange(k("paused"), 0, -1);
+    pipeline.zrange(k("delayed"), 0, -1);
+    pipeline.zrange(k("completed"), 0, -1);
+    pipeline.zrange(k("failed"), 0, -1);
+    pipeline.zrange(k("prioritized"), 0, -1);
+    pipeline.zrange(k("waiting-children"), 0, -1);
+    const results = await pipeline.exec();
+    const ids = new Set<string>();
+    for (const result of results ?? []) {
+      if (!result[0] && Array.isArray(result[1])) {
+        for (const id of result[1] as string[]) ids.add(id);
+      }
+    }
+    return [...ids];
+  }
+
+  const listKey = state === "waiting" ? "wait" : state;
+  const listStates = ["waiting", "active", "paused"];
+  if (listStates.includes(state)) {
+    return connection.lrange(k(listKey), 0, -1);
+  }
+
+  return connection.zrange(k(state), 0, -1);
+}
+
 export async function getJobState(
   connection: RedisConnection,
   queueName: string,

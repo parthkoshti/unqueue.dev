@@ -332,6 +332,37 @@ export function createRedisService(deps: ServiceDeps, logger: Logger) {
       return { ok: true as const };
     },
 
+    async getClientCounts(actor: Actor, environmentId: string) {
+      await assertEnvironmentAccess(
+        deps.db,
+        actor.userId,
+        environmentId,
+        "viewer",
+      );
+
+      const rows = await deps.db
+        .select({ id: redisInstances.id, nickname: redisInstances.nickname })
+        .from(redisInstances)
+        .where(eq(redisInstances.environmentId, environmentId));
+
+      return Promise.all(
+        rows.map(async ({ id, nickname }) => {
+          try {
+            if (!deps.realtime.hasInstance(id)) {
+              return { id, nickname, connectedClients: null };
+            }
+            const { connection } = deps.realtime.getConnection(id);
+            const info = await connection.info("clients");
+            const match = /connected_clients:(\d+)/.exec(info);
+            const connectedClients = match ? parseInt(match[1]!, 10) : null;
+            return { id, nickname, connectedClients };
+          } catch {
+            return { id, nickname, connectedClients: null };
+          }
+        }),
+      );
+    },
+
     async bootstrapInstances() {
       const existing = deps.getBootstrapPromise();
       if (existing) {

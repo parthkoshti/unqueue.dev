@@ -86,8 +86,7 @@ function EnvironmentAttentionQueuesTableSkeleton({ rows = 3 }: { rows?: number }
           <th className={cn(thClass, "text-right")}>Backlog</th>
           <th className={cn(thClass, "text-right")}>Failed</th>
           <th className={cn(thClass, "text-right")}>% Failed</th>
-          <th className={cn(thClass, "text-right")}>Active</th>
-          <th className={cn(thClass, "pr-4")}>Status</th>
+          <th className={cn(thClass, "text-right pr-4")}>Active</th>
         </tr>
       </thead>
       <tbody>
@@ -105,11 +104,8 @@ function EnvironmentAttentionQueuesTableSkeleton({ rows = 3 }: { rows?: number }
             <td className={tdClass}>
               <Skeleton className="ml-auto h-3.5 w-10" />
             </td>
-            <td className={tdClass}>
-              <Skeleton className="ml-auto h-3.5 w-8" />
-            </td>
             <td className={cn(tdClass, "pr-4")}>
-              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="ml-auto h-3.5 w-8" />
             </td>
           </tr>
         ))}

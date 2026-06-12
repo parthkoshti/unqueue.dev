@@ -4,6 +4,7 @@ import {
   getJobProgress,
   getJobState,
   listJobs,
+  listJobIds,
   type JobListState,
 } from "@unqueue/bullmq";
 import type { Logger } from "@unqueue/logger";
@@ -57,6 +58,18 @@ export function createJobService(deps: ServiceDeps, logger: Logger) {
         input.end,
         queuePool,
       );
+    },
+
+    async listIds(
+      actor: Actor,
+      input: {
+        redisInstanceId: string;
+        queueName: string;
+        state: JobListState;
+      },
+    ) {
+      const { connection, prefix } = await getConnection(actor, input.redisInstanceId);
+      return listJobIds(connection, input.queueName, prefix, input.state);
     },
 
     async get(

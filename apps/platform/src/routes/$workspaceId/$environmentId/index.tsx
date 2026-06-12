@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DatabaseIcon, InboxIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
 import { rpcClient } from "@/lib/api";
 import {
@@ -30,6 +30,7 @@ import {
 } from "@unqueue/ui/components/card";
 import { RoutePending } from "@/lib/route-pending";
 import { RedisConnectionSheet } from "@/components/redis-connection-sheet";
+import { RedisStatusBar } from "@/components/redis-status-bar";
 import {
   environmentQueuesForceRefreshOptions,
   environmentQueuesQueryOptions,
@@ -65,9 +66,12 @@ function EnvironmentOverview() {
 
   const queuesQuery = useQuery(environmentQueuesQueryOptions(environmentId));
 
-  const queues = queuesQuery.data ?? [];
-  const redisInstances = redisQuery.data ?? [];
-  const redisInstanceIds = redisInstances.map((instance) => instance.id);
+  const queues = useMemo(() => queuesQuery.data ?? [], [queuesQuery.data]);
+  const redisInstances = useMemo(() => redisQuery.data ?? [], [redisQuery.data]);
+  const redisInstanceIds = useMemo(
+    () => redisInstances.map((instance) => instance.id),
+    [redisInstances],
+  );
   const connectedCount = redisInstances.filter(
     (i) => i.status === "connected",
   ).length;
@@ -203,6 +207,10 @@ function EnvironmentOverview() {
           )}
         </div>
       </ScrollArea>
+
+      {redisInstances.length > 0 && (
+        <RedisStatusBar environmentId={environmentId} />
+      )}
 
       <RedisConnectionSheet
         open={connectionSheetOpen}

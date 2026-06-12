@@ -9,6 +9,7 @@ export {
   getQueueMeta,
   getQueueMetaBatch,
   listJobs,
+  listJobIds,
   type JobState,
   type JobListState,
   getJobState,
