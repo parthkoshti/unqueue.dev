@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 import { rpcClient } from "@/lib/api";
-import { sessionQueryOptions } from "@/lib/session-query";
+import { useShellContext } from "@/hooks/use-shell-context";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,17 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/$workspaceId/bookmarks")({
   validateSearch: searchSchema,
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["workspaces"],
+        queryFn: () => rpcClient.workspace.list(),
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["bookmark-folders", params.workspaceId],
+        queryFn: () => rpcClient.bookmark.listFolders({ workspaceId: params.workspaceId }),
+      }),
+    ]),
   component: BookmarksPage,
 });
 
@@ -205,8 +216,7 @@ function BookmarksPage() {
     setSheetBookmarkId(bookmarkIdFromSearch);
   }, [bookmarkIdFromSearch]);
 
-  const sessionQuery = useQuery(sessionQueryOptions());
-  const currentUserId = sessionQuery.data?.data?.user?.id;
+  const { currentUserId } = useShellContext();
 
   const workspacesQuery = useQuery({
     queryKey: ["workspaces"],
@@ -536,6 +546,7 @@ function BookmarksPage() {
         <SheetContent
           side="right"
           className="flex w-full flex-col gap-0 overflow-hidden p-0 data-[side=right]:sm:max-w-2xl"
+          aria-describedby={undefined}
         >
           {sheetBookmarkId && (
             <BookmarkSnapshotPanel

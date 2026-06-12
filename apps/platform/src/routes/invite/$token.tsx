@@ -1,5 +1,4 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { rpcClient } from "@/lib/api";
 import { resolveEnvironmentId } from "@/lib/resolve-environment";
 import { sessionQueryOptions } from "@/lib/session-query";
@@ -14,47 +13,26 @@ export const Route = createFileRoute("/invite/$token")({
       });
     }
   },
-  component: InvitePage,
-});
-
-function InvitePage() {
-  const { token } = Route.useParams();
-  const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const result = await rpcClient.invite.accept({ token });
-        const envs = await rpcClient.environment.list({
-          workspaceId: result.workspaceId,
-        });
-        const environmentId = resolveEnvironmentId(result.workspaceId, envs);
-        if (!environmentId) {
-          setError("This workspace does not have an environment yet.");
-          return;
-        }
-
-        navigate({
-          to: "/$workspaceId/$environmentId",
-          params: {
-            workspaceId: result.workspaceId,
-            environmentId,
-          },
-        });
-      } catch (inviteError) {
-        setError(
-          inviteError instanceof Error
-            ? inviteError.message
-            : "Could not accept this invite.",
-        );
-      }
-    })();
-  }, [token, navigate]);
-
-  return (
-    <div className="flex min-h-svh items-center justify-center p-4 text-sm">
-      {error ?? "Accepting invite..."}
+  pendingComponent: () => (
+    <div className="flex min-h-svh items-center justify-center p-4 text-sm text-muted-foreground">
+      Accepting invite...
     </div>
-  );
-}
+  ),
+  errorComponent: ({ error }) => (
+    <div className="flex min-h-svh items-center justify-center p-4 text-sm">
+      {error instanceof Error ? error.message : "Could not accept this invite."}
+    </div>
+  ),
+  loader: async ({ params }) => {
+    const result = await rpcClient.invite.accept({ token: params.token });
+    const envs = await rpcClient.environment.list({ workspaceId: result.workspaceId });
+    const environmentId = resolveEnvironmentId(result.workspaceId, envs);
+    if (!environmentId) throw new Error("This workspace does not have an environment yet.");
+
+    throw redirect({
+      to: "/$workspaceId/$environmentId",
+      params: { workspaceId: result.workspaceId, environmentId },
+    });
+  },
+  component: () => null,
+});

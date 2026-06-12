@@ -45,6 +45,17 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/$workspaceId/settings/alerts")({
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["workspaces"],
+        queryFn: () => rpcClient.workspace.list(),
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["environments", params.workspaceId],
+        queryFn: () => rpcClient.environment.list({ workspaceId: params.workspaceId }),
+      }),
+    ]),
   component: AlertsSettings,
 });
 

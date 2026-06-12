@@ -2,16 +2,12 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { rpcClient, setWorkspaceId } from "@/lib/api";
 import { resolveEnvironmentId } from "@/lib/resolve-environment";
-import { sessionQueryOptions } from "@/lib/session-query";
+import { AppShellSkeleton } from "@/components/app-sidebar-skeleton";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: async ({ context }: { context: { queryClient: QueryClient } }) => {
-    const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
-    if (!session?.data?.user) {
-      throw redirect({ to: "/login" });
-    }
-
-    const workspaces = await context.queryClient.fetchQuery({
+  pendingComponent: AppShellSkeleton,
+  loader: async ({ context }: { context: { queryClient: QueryClient } }) => {
+    const workspaces = await context.queryClient.ensureQueryData({
       queryKey: ["workspaces"],
       queryFn: () => rpcClient.workspace.list(),
     });
@@ -19,7 +15,7 @@ export const Route = createFileRoute("/")({
     if (!first) throw redirect({ to: "/login" });
 
     setWorkspaceId(first.id);
-    const envs = await context.queryClient.fetchQuery({
+    const envs = await context.queryClient.ensureQueryData({
       queryKey: ["environments", first.id],
       queryFn: () => rpcClient.environment.list({ workspaceId: first.id }),
     });

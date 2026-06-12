@@ -15,6 +15,7 @@ export function useShellContext() {
   const sessionQuery = useQuery(sessionQueryOptions());
 
   const isAuthed = !!sessionQuery.data?.data?.user;
+  const currentUserId = sessionQuery.data?.data?.user?.id;
 
   const workspacesQuery = useQuery({
     queryKey: ["workspaces"],
@@ -50,6 +51,7 @@ export function useShellContext() {
 
   return {
     isAuthed,
+    currentUserId,
     workspaceId,
     environmentId,
     workspaceRole,

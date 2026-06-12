@@ -22,6 +22,17 @@ import {
 } from "@/components/redis-connection-sheet";
 
 export const Route = createFileRoute("/$workspaceId/connections")({
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["workspaces"],
+        queryFn: () => rpcClient.workspace.list(),
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["environments", params.workspaceId],
+        queryFn: () => rpcClient.environment.list({ workspaceId: params.workspaceId }),
+      }),
+    ]),
   component: ConnectionsPage,
 });
 

@@ -10,6 +10,7 @@ import { Label } from "@unqueue/ui/components/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -86,9 +87,9 @@ export function BookmarkFolderPicker({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Bookmark job</DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription>
             Save a snapshot of this job to a folder.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         {!canWrite ? (

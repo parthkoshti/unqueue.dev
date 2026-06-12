@@ -521,6 +521,7 @@ function QueuePage() {
         <SheetContent
           side="right"
           className="flex w-full flex-col gap-0 overflow-hidden p-0 data-[side=right]:sm:max-w-2xl"
+          aria-describedby={undefined}
         >
           {sheetJobId && (
             <JobDetailPanel

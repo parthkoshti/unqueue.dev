@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 import { rpcClient } from "@/lib/api";
-import { sessionQueryOptions } from "@/lib/session-query";
+import { useShellContext } from "@/hooks/use-shell-context";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,21 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/$workspaceId/settings/members")({
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["workspaces"],
+        queryFn: () => rpcClient.workspace.list(),
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["members", params.workspaceId],
+        queryFn: () => rpcClient.members.list({ workspaceId: params.workspaceId }),
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["member-invites", params.workspaceId],
+        queryFn: () => rpcClient.members.listInvites({ workspaceId: params.workspaceId }),
+      }),
+    ]),
   component: MembersSettings,
 });
 
@@ -692,8 +707,7 @@ function MembersSettings() {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editingInvite, setEditingInvite] = useState<Invite | null>(null);
 
-  const sessionQuery = useQuery(sessionQueryOptions());
-  const currentUserId = sessionQuery.data?.data?.user?.id;
+  const { currentUserId } = useShellContext();
 
   const workspacesQuery = useQuery({
     queryKey: ["workspaces"],

@@ -1,16 +1,27 @@
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarInset,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuSkeleton,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ScrollArea } from "@unqueue/ui/components/scroll-area";
+import {
+  EnvironmentOverviewContentSkeleton,
+  EnvironmentOverviewHeaderSkeleton,
+} from "@/components/environment-overview-skeleton";
 
 const PLATFORM_NAV_ITEMS = 4;
 const QUEUE_NAV_ITEMS = 5;
@@ -135,5 +146,36 @@ export function AppSidebarSkeleton() {
         <FooterUserSkeleton />
       </SidebarFooter>
     </>
+  );
+}
+
+export function AppShellSkeleton() {
+  return (
+    <TooltipProvider>
+      <SidebarProvider>
+        <Sidebar collapsible="icon">
+          <AppSidebarSkeleton />
+          <SidebarRail />
+        </Sidebar>
+        <SidebarInset className="flex h-svh flex-col overflow-hidden overscroll-none">
+          <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
+            <SidebarTrigger className="-ml-1" />
+            <Skeleton className="h-4 w-32" />
+          </header>
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-y-none">
+            <div className="flex h-full flex-col">
+              <div className="flex shrink-0 items-start justify-between gap-4 border-b px-4 py-3">
+                <EnvironmentOverviewHeaderSkeleton />
+              </div>
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="space-y-4 p-4">
+                  <EnvironmentOverviewContentSkeleton />
+                </div>
+              </ScrollArea>
+            </div>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
