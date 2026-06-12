@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookmarkIcon, CheckIcon, CopyIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookmarkFolderPicker } from "@/components/bookmark-folder-picker";
 import { rpcClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -104,6 +104,7 @@ export function JobDetailPanel({
   const [socketConnected, setSocketConnected] = useState(() =>
     getSocket().connected,
   );
+  const jobInvalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -126,21 +127,25 @@ export function JobDetailPanel({
     const offEvent = onSocketEvent((data) => {
       if (data.room !== jobRoom) return;
       if (data.type === "job:update" || data.type === "job:progress") {
-        void queryClient.invalidateQueries({
-          queryKey: ["job", redisInstanceId, queueName, jobId],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: ["job-progress", redisInstanceId, queueName, jobId],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: ["job-logs", redisInstanceId, queueName, jobId],
-        });
+        if (jobInvalidateTimer.current) clearTimeout(jobInvalidateTimer.current);
+        jobInvalidateTimer.current = setTimeout(() => {
+          void queryClient.invalidateQueries({
+            queryKey: ["job", redisInstanceId, queueName, jobId],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ["job-progress", redisInstanceId, queueName, jobId],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ["job-logs", redisInstanceId, queueName, jobId],
+          });
+        }, 500);
       }
     });
 
     return () => {
       offEvent();
       unsubscribeRooms([jobRoom]);
+      if (jobInvalidateTimer.current) clearTimeout(jobInvalidateTimer.current);
     };
   }, [jobRoom, jobId, queueName, queryClient, redisInstanceId]);
 

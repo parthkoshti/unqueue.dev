@@ -84,6 +84,8 @@ function QueuePage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isFetchingNextPageRef = useRef(false);
   const hasNextPageRef = useRef(false);
+  const metricsInvalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const jobsInvalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectingAll, setSelectingAll] = useState(false);
   const [metricsWindow, setMetricsWindow] = useState<
@@ -164,9 +166,12 @@ function QueuePage() {
           );
         }
         if (state !== "latest") {
-          void queryClient.invalidateQueries({
-            queryKey: ["jobs", redisInstanceId, queueName, state],
-          });
+          if (jobsInvalidateTimer.current) clearTimeout(jobsInvalidateTimer.current);
+          jobsInvalidateTimer.current = setTimeout(() => {
+            void queryClient.invalidateQueries({
+              queryKey: ["jobs", redisInstanceId, queueName, state],
+            });
+          }, 1000);
         }
       }
       if (data.type === "job:removed") {
@@ -180,9 +185,12 @@ function QueuePage() {
           );
         }
         if (state !== "latest") {
-          void queryClient.invalidateQueries({
-            queryKey: ["jobs", redisInstanceId, queueName, state],
-          });
+          if (jobsInvalidateTimer.current) clearTimeout(jobsInvalidateTimer.current);
+          jobsInvalidateTimer.current = setTimeout(() => {
+            void queryClient.invalidateQueries({
+              queryKey: ["jobs", redisInstanceId, queueName, state],
+            });
+          }, 1000);
         }
       }
       if (data.type === "queue:counts") {
@@ -211,9 +219,12 @@ function QueuePage() {
         }
       }
       if (data.type === "metrics:update") {
-        void queryClient.invalidateQueries({
-          queryKey: ["queue-metrics", redisInstanceId, queueName],
-        });
+        if (metricsInvalidateTimer.current) clearTimeout(metricsInvalidateTimer.current);
+        metricsInvalidateTimer.current = setTimeout(() => {
+          void queryClient.invalidateQueries({
+            queryKey: ["queue-metrics", redisInstanceId, queueName],
+          });
+        }, 2000);
       }
     });
 
@@ -234,6 +245,8 @@ function QueuePage() {
       offEvent();
       offResync();
       unsubscribeRooms([room]);
+      if (metricsInvalidateTimer.current) clearTimeout(metricsInvalidateTimer.current);
+      if (jobsInvalidateTimer.current) clearTimeout(jobsInvalidateTimer.current);
     };
   }, [environmentId, redisInstanceId, queueName, queryClient, state]);
 

@@ -30,8 +30,8 @@ export function JobHoverPreview({
     <div
       className="group relative"
       onMouseEnter={() => {
-        logsQuery.refetch();
-        progressQuery.refetch();
+        if (!logsQuery.isFetching) void logsQuery.refetch();
+        if (!progressQuery.isFetching) void progressQuery.refetch();
       }}
     >
       {children}
