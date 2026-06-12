@@ -13,6 +13,8 @@ overrides:
 allowBuilds:
   esbuild: true
   msgpackr-extract: true
+  sharp: true
+  workerd: true
 
 minimumReleaseAgeExclude:
   - '@orpc/client@1.14.5'

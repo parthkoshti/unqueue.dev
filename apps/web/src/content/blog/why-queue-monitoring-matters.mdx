@@ -1,0 +1,47 @@
+---
+title: "Why queue monitoring matters more than you think"
+description: "Background job failures are silent by default. Here's why investing in queue observability pays off — and what to look for in a monitoring solution."
+date: "2024-12-05"
+author: "Parth Koshti"
+tags: ["observability", "bullmq", "infrastructure"]
+---
+
+Background jobs fail silently. Unless you've built explicit alerting, a job that errors at 2am stays failed until someone notices the downstream effect — an email that wasn't sent, a report that wasn't generated, an order that wasn't fulfilled.
+
+Queue monitoring exists to close that gap.
+
+## The invisible backlog problem
+
+BullMQ's default behavior on unhandled errors is to move the job to the `failed` state and continue. This is the right behavior — you don't want one bad job to block the entire queue. But it means failures accumulate invisibly.
+
+A healthy queue that processes 10,000 jobs per day at a 0.1% failure rate produces 10 silent failures daily. After a week, you have 70 unretried failures. After a month, 300.
+
+Most teams only discover this when a customer complains.
+
+## What good observability looks like
+
+**State counts.** At a minimum, you want to see how many jobs are in each state (active, waiting, delayed, failed, completed) — ideally updating in realtime.
+
+**Failure rate trend.** A single failure is often noise. A spike in failure rate over 15 minutes is a signal. Your monitoring should show you trends, not just snapshots.
+
+**Job inspection.** When a job fails, you need to see *why* — the error message, stack trace, the exact input data that caused the failure. Without this, debugging requires adding extra logging and waiting for a reproduction.
+
+**Structured logs.** If your workers emit structured log output, those logs should be attached to the job that produced them — not buried in a flat log file where they're hard to correlate.
+
+**Admin actions.** Observability without action is incomplete. Being able to retry a batch of failed jobs, or clean up a queue that's grown unexpectedly large, should require one click — not a redis-cli session.
+
+## Why BullMQ-specific tooling beats generic APM
+
+Generic APM products (Datadog, New Relic, etc.) can show you that a worker process crashed — but they can't show you which specific job caused it, what the job's input data was, or what log output it produced before failing.
+
+BullMQ stores all of this in Redis, in a well-defined schema. A purpose-built tool like unqueue reads directly from that schema, which means no instrumentation required: the data is already there.
+
+## Self-hosting vs. cloud
+
+The tradeoff is simple: self-hosting keeps your job data fully private (important if job payloads contain PII), while cloud hosting removes the operational overhead of running another service.
+
+unqueue supports both. The self-hosted path is a single `docker compose up` away.
+
+---
+
+If your BullMQ setup is in production and you're not monitoring it, that's not a queue problem — it's a visibility problem. The data you need is already in Redis. You just need something to surface it.

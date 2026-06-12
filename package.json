@@ -3,6 +3,7 @@
   "private": false,
   "scripts": {
     "dev": "doppler run -- turbo run dev --filter=@unqueue/platform --filter=@unqueue/server --filter=@unqueue/bullmq --filter=@unqueue/services",
+    "dev:web": "turbo run dev --filter=@unqueue/web",
     "dev:packages": "doppler run -- turbo run dev --filter='./packages/*'",
     "build": "doppler run -- turbo run build",
     "start": "doppler run -- turbo run start --filter=@unqueue/server",
@@ -13,11 +14,15 @@
     "db:migrate:prod": "doppler run --config prd -- turbo run db:migrate --filter=@unqueue/db",
     "demo-worker": "doppler run -- pnpm --filter @unqueue/demo-worker dev",
     "compose:up": "doppler run -- docker compose up",
-    "compose:up:build": "doppler run -- docker compose up --build"
+    "compose:up:build": "doppler run -- docker compose up --build",
+    "deploy:web": "turbo run build --filter=@unqueue/web && wrangler pages deploy apps/web/dist --project-name=unqueue-web",
+    "deploy:web:build": "turbo run build --filter=@unqueue/web",
+    "deploy:web:publish": "wrangler pages deploy apps/web/dist --project-name=unqueue-web"
   },
   "devDependencies": {
     "turbo": "^2.9.15",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.95.0"
   },
   "packageManager": "pnpm@11.5.3+sha512.7ac1c919341c213a34dc0d02afb7143c5c26ac26ee8c4782deea821b8ac64d2134a081fd8941dae6e29bbb48f58dfc2b7fbceeccc07cb2f09d219d342a4969ed",
   "engines": {

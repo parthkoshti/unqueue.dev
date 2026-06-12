@@ -1,0 +1,58 @@
+---
+title: Configuration
+description: Full reference for unqueue environment variables.
+---
+
+All configuration is done via environment variables. Copy `.env.example` to `.env` and edit as needed.
+
+## Required
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `REDIS_URL` | Redis URL for unqueue's internal job queue |
+| `BETTER_AUTH_SECRET` | Random secret for session signing — generate with `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | Public URL of the API server (e.g. `https://api.your-domain.com`) |
+| `PLATFORM_URL` | Public URL of the frontend (e.g. `https://your-domain.com`) |
+
+## Optional
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3001` | Port the API server listens on |
+| `LOG_LEVEL` | `info` | Log verbosity — `debug`, `info`, `warn`, or `error` |
+| `COOKIE_DOMAIN` | — | Cookie domain for cross-subdomain auth (e.g. `.your-domain.com`) |
+| `SMTP_HOST` | — | SMTP server hostname for transactional email |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USER` | — | SMTP username |
+| `SMTP_PASS` | — | SMTP password |
+| `SMTP_FROM` | — | From address for outgoing email (e.g. `noreply@your-domain.com`) |
+
+## Email
+
+Email is used for sign-up verification and password reset. If SMTP is not configured, unqueue will log email content to the console instead — useful for local development.
+
+```bash
+SMTP_HOST=smtp.postmarkapp.com
+SMTP_PORT=587
+SMTP_USER=your-api-token
+SMTP_PASS=your-api-token
+SMTP_FROM=noreply@your-domain.com
+```
+
+## Redis URL format
+
+The `REDIS_URL` variable (for unqueue's internal queue) accepts standard Redis URL syntax:
+
+```bash
+# Plain
+REDIS_URL=redis://localhost:6379
+
+# With password
+REDIS_URL=redis://:password@localhost:6379
+
+# With TLS
+REDIS_URL=rediss://user:password@your-redis.host:6380/0
+```
+
+This is separate from the Redis instances you add inside the unqueue dashboard for monitoring.

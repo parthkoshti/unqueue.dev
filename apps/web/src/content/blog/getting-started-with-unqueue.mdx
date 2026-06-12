@@ -1,0 +1,59 @@
+---
+title: "Getting started with unqueue"
+description: "A step-by-step guide to connecting your BullMQ Redis instance and getting live queue visibility in under five minutes."
+date: "2024-11-20"
+author: "Parth Koshti"
+tags: ["getting-started", "bullmq"]
+---
+
+unqueue connects directly to the Redis instance your BullMQ workers use. There's no agent to deploy, no SDK to instrument, and no schema changes — just a connection URL.
+
+## Prerequisites
+
+- A running BullMQ setup (workers + Redis)
+- Redis reachable from the unqueue server (TLS supported)
+- An unqueue account (self-hosted or cloud)
+
+## Step 1: Create a workspace
+
+Sign in to unqueue and create a workspace for your project. A workspace groups your environments (dev, staging, prod) and controls team access.
+
+## Step 2: Add an environment
+
+Inside your workspace, create an environment and give it a name that matches your deployment (e.g. `production` or `staging`).
+
+## Step 3: Connect your Redis
+
+Navigate to **Connections** and add a new Redis connection. Paste your connection URL:
+
+```
+rediss://username:password@your-redis.host:6380/0
+```
+
+unqueue will validate the connection, check your ACL permissions, and begin scanning for queues.
+
+### ACL recommendations
+
+For read-only monitoring, create a dedicated ACL user:
+
+```
+ACL SETUSER unqueue-read on >your-password ~bull:* &* +@read +ping +info +psubscribe +subscribe
+```
+
+For admin actions (retry/remove jobs, pause/drain queues), extend the ACL:
+
+```
+ACL SETUSER unqueue-admin on >your-password ~bull:* &* +@read +@write +@pubsub +ping +info
+```
+
+## Step 4: Watch your queues
+
+Once connected, unqueue scans for all queues matching your key prefix (default: `bull`). Within seconds you'll see queue names, job counts by state, and a live activity feed.
+
+Click any queue to see the full job list. Click any job to inspect its data, progress, logs, and return value.
+
+## What's next?
+
+- **Set up alerts**: configure a Discord webhook to get notified on queue failures
+- **Invite teammates**: go to Settings → Members to add collaborators
+- **Bookmark queues**: pin frequently-monitored queues for quick access

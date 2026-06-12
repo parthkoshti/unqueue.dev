@@ -1,0 +1,51 @@
+# unqueue
+
+> Real-time BullMQ monitoring dashboard. Paste your Redis URL and get full visibility into every queue, job, failure, and worker log in under 60 seconds.
+
+## What is unqueue?
+
+unqueue is a web-based monitoring dashboard for BullMQ, the Node.js queue library built on Redis. It connects directly to your Redis instance and reads BullMQ's key schema to surface queue state, job details, failure reasons, stack traces, and worker logs — all in real time.
+
+It does not require any agents, code changes, or instrumentation. Job data is never stored outside of your Redis instance.
+
+## Who is it for?
+
+Backend engineers and platform teams running BullMQ workers in production on Node.js.
+
+## Key capabilities
+
+- Real-time queue and job monitoring via BullMQ QueueEvents
+- Job inspection: input data, return value, stack trace, and worker logs per job
+- Automatic queue discovery — no queue registration required
+- Admin actions: retry (individual or bulk), pause, drain, clean, obliterate
+- Support for multiple Redis connections (environments, regions, microservices)
+- Discord alerts for queue spikes and sustained failure rates
+- BullMQ v3 and v4 support
+- BullMQ Pro support
+- Custom key prefix support
+
+## Supported Redis providers
+
+Redis Cloud, Upstash, Amazon ElastiCache, Aiven, Azure Cache for Redis, self-hosted Redis. TLS and ACL users supported.
+
+## Privacy and data handling
+
+unqueue reads directly from your Redis instance on demand. No job data is stored, cached, or transmitted to unqueue's servers. For full control, self-host using Docker Compose.
+
+## Licensing
+
+AGPL-3.0. Source code available at https://github.com/unqueue/unqueue. The self-hosted version is identical to the cloud version — no features gated.
+
+## Pricing
+
+Free to start. No credit card required.
+See https://unqueue.dev for current plan details.
+
+## Key pages
+
+- Homepage: https://unqueue.dev
+- Sign up: https://app.unqueue.dev/signup
+- Login: https://app.unqueue.dev/login
+- Blog: https://unqueue.dev/blog
+- Self-host docs: https://github.com/unqueue/unqueue#docker--dokploy
+- Source code: https://github.com/unqueue/unqueue

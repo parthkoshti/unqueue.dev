@@ -1,0 +1,10 @@
+{
+  "extends": "@unqueue/config/typescript/react",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*", "vite.config.ts"]
+}

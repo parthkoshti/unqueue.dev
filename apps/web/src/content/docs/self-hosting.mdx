@@ -1,0 +1,138 @@
+---
+title: Docker Compose Setup
+description: Run unqueue on your own infrastructure using Docker Compose.
+---
+
+unqueue is AGPL-3.0 licensed. The self-hosted version is identical to the cloud version — no features are gated. This guide covers running unqueue on your own infrastructure using Docker Compose.
+
+## Prerequisites
+
+- Docker 20.10+
+- Docker Compose v2 (`docker compose`, not `docker-compose`)
+- A PostgreSQL database
+- A Redis instance (or use the one included in the Compose file)
+
+## Quick start
+
+Clone the repository and copy the example environment file:
+
+```bash
+git clone https://github.com/unqueue/unqueue.git
+cd unqueue
+cp .env.example .env
+```
+
+Edit `.env` with your configuration (see [Configuration](/docs/configuration)), then start the stack:
+
+```bash
+docker compose up -d
+```
+
+The platform will be available at `http://localhost:3000` and the server at `http://localhost:3001`.
+
+## Environment variables
+
+At minimum you need to set the following in `.env`:
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/unqueue
+
+# Redis (for unqueue's own job queue — not the Redis you're monitoring)
+REDIS_URL=redis://localhost:6379
+
+# Auth — generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=your-secret-here
+
+# The public URL of the platform (used for email links and CORS)
+PLATFORM_URL=https://your-domain.com
+
+# The public URL of the API server
+BETTER_AUTH_URL=https://api.your-domain.com
+```
+
+See [Configuration](/docs/configuration) for the full variable reference.
+
+## Updating
+
+Pull the latest changes and rebuild the images:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+Database migrations run automatically on startup.
+
+## Nginx reverse proxy
+
+If you want to expose unqueue behind a domain, here is a minimal Nginx configuration:
+
+```nginx
+# Platform (frontend)
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# API server
+server {
+    listen 80;
+    server_name api.your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (required for live queue events)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+Use [Certbot](https://certbot.eff.org) or [Caddy](https://caddyserver.com) to add TLS.
+
+## Caddy (recommended alternative)
+
+Caddy handles TLS automatically via Let's Encrypt:
+
+```caddy
+your-domain.com {
+    reverse_proxy localhost:3000
+}
+
+api.your-domain.com {
+    reverse_proxy localhost:3001
+}
+```
+
+## Troubleshooting
+
+**The platform can't reach the API server**
+
+Make sure `BETTER_AUTH_URL` in `.env` points to the public URL of the API — not `localhost`. Browsers make requests to this URL directly.
+
+**Jobs aren't updating in real time**
+
+Check that your Nginx/proxy config includes WebSocket headers (`Upgrade` and `Connection`). The live event stream requires a persistent connection.
+
+**Database migrations failed on startup**
+
+Run migrations manually:
+
+```bash
+docker compose run --rm server pnpm db:migrate
+```
