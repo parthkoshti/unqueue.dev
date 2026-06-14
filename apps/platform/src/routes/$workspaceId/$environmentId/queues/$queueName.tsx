@@ -165,6 +165,9 @@ function QueuePage() {
 
   const jobs = jobsQuery.data?.pages.flat() ?? [];
   const fetchedCount = jobs.length;
+  const sheetListJob = sheetJobId
+    ? jobs.find((job) => job.id === sheetJobId)
+    : undefined;
 
   useEffect(() => {
     const room = `queue:${redisInstanceId}:${queueName}`;
@@ -602,6 +605,7 @@ function QueuePage() {
               redisInstanceId={redisInstanceId}
               queueName={queueName}
               jobId={sheetJobId}
+              listJob={sheetListJob}
               canWrite={canWrite}
             />
           )}

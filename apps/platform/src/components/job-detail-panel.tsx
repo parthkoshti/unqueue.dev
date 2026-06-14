@@ -3,7 +3,7 @@ import { BookmarkIcon, CheckIcon, CopyIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BookmarkFolderPicker } from "@/components/bookmark-folder-picker";
 import { rpcClient } from "@/lib/api";
-import type { ParsedLog } from "@unqueue/bullmq";
+import type { JobDetail, JobSummary, ParsedLog } from "@unqueue/bullmq";
 import { cn } from "@/lib/utils";
 import {
   onSocketEvent,
@@ -84,12 +84,22 @@ function DetailRow({
   );
 }
 
+function summaryToPlaceholder(job: JobSummary): JobDetail {
+  return {
+    ...job,
+    payload: null,
+    progress: null,
+    logs: [],
+  };
+}
+
 export function JobDetailPanel({
   workspaceId,
   environmentId,
   redisInstanceId,
   queueName,
   jobId,
+  listJob,
   canWrite = true,
 }: {
   workspaceId: string;
@@ -97,6 +107,7 @@ export function JobDetailPanel({
   redisInstanceId: string;
   queueName: string;
   jobId: string;
+  listJob?: JobSummary;
   canWrite?: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -130,6 +141,7 @@ export function JobDetailPanel({
   const jobQuery = useQuery({
     queryKey: ["job", redisInstanceId, queueName, jobId],
     queryFn: () => rpcClient.job.get({ redisInstanceId, queueName, jobId }),
+    placeholderData: listJob ? summaryToPlaceholder(listJob) : undefined,
   });
 
   const invalidateJob = () => {
@@ -145,7 +157,9 @@ export function JobDetailPanel({
   };
 
   const job = jobQuery.data;
-  const isLoadingJob = jobQuery.isLoading;
+  const showSummarySkeleton = jobQuery.isLoading;
+  const isLoadingHeavyFields =
+    jobQuery.isPlaceholderData || jobQuery.isFetching;
   const created = formatJobTimestamp(job?.timestamp);
   const started = formatJobTimestamp(job?.processedOn);
   const finished = formatJobTimestamp(job?.finishedOn);
@@ -159,7 +173,7 @@ export function JobDetailPanel({
             <SheetTitle>
               Job <span className="font-mono">{jobId}</span>
             </SheetTitle>
-            {isLoadingJob ? (
+            {showSummarySkeleton ? (
               <Skeleton className="h-3.5 w-48" />
             ) : (
               job && (
@@ -171,7 +185,7 @@ export function JobDetailPanel({
             <Button
               size="sm"
               variant="outline"
-              disabled={isLoadingJob || !job || !canWrite}
+              disabled={showSummarySkeleton || !job || !canWrite}
               onClick={() => setBookmarkPickerOpen(true)}
             >
               <BookmarkIcon />
@@ -180,7 +194,7 @@ export function JobDetailPanel({
             <Button
               size="sm"
               variant="outline"
-              disabled={isLoadingJob || !job || !canWrite}
+              disabled={showSummarySkeleton || !job || !canWrite}
               onClick={() =>
                 void runAction(() =>
                   rpcClient.jobActions.retry({ redisInstanceId, queueName, jobId }),
@@ -192,7 +206,7 @@ export function JobDetailPanel({
             <Button
               size="sm"
               variant="outline"
-              disabled={isLoadingJob || !job || !canWrite}
+              disabled={showSummarySkeleton || !job || !canWrite}
               onClick={() =>
                 void runAction(() =>
                   rpcClient.jobActions.promote({ redisInstanceId, queueName, jobId }),
@@ -204,7 +218,7 @@ export function JobDetailPanel({
             <Button
               size="sm"
               variant="destructive"
-              disabled={isLoadingJob || !job || !canWrite}
+              disabled={showSummarySkeleton || !job || !canWrite}
               onClick={() =>
                 void runAction(() =>
                   rpcClient.jobActions.remove({ redisInstanceId, queueName, jobId }),
@@ -223,7 +237,7 @@ export function JobDetailPanel({
             <h3 className="mb-1.5 text-[11px] font-medium text-muted-foreground">
               Details
             </h3>
-            {isLoadingJob ? (
+            {showSummarySkeleton ? (
               <div className="grid grid-cols-2 gap-x-6">
                 <dl className="min-w-0 space-y-0.5">
                   <DetailRow label="Job ID" mono>
@@ -369,7 +383,7 @@ export function JobDetailPanel({
 
           <section>
             <h3 className="mb-2 font-medium text-muted-foreground">Progress</h3>
-            {jobQuery.isLoading ? (
+            {isLoadingHeavyFields ? (
               <CodeBlockSkeleton lines={3} />
             ) : job?.progress &&
               typeof job.progress === "object" &&
@@ -413,7 +427,7 @@ export function JobDetailPanel({
 
           <section>
             <h3 className="mb-2 font-medium text-muted-foreground">Payload</h3>
-            {jobQuery.isLoading ? (
+            {isLoadingHeavyFields ? (
               <CodeBlockSkeleton lines={6} />
             ) : job?.payload == null ? (
               <p className="text-muted-foreground">No payload</p>
@@ -428,7 +442,7 @@ export function JobDetailPanel({
             <h3 className="mb-2 font-medium text-muted-foreground">
               Logs {(job?.logs.length ?? 0) > 0 && `(${job?.logs.length})`}
             </h3>
-            {jobQuery.isLoading ? (
+            {isLoadingHeavyFields ? (
               <CodeBlockSkeleton lines={5} />
             ) : (job?.logs ?? []).length === 0 ? (
               <p className="text-muted-foreground">No logs</p>

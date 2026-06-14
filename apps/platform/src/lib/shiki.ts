@@ -1,10 +1,17 @@
-import { createHighlighter, type BundledLanguage } from "shiki";
+import json from "@shikijs/langs/json";
+import javascript from "@shikijs/langs/javascript";
+import log from "@shikijs/langs/log";
+import githubDark from "@shikijs/themes/github-dark";
+import githubLight from "@shikijs/themes/github-light";
+import { createHighlighterCore } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 
-export type CodeLanguage = Extract<BundledLanguage, "json" | "log" | "javascript">;
+export type CodeLanguage = "json" | "log" | "javascript";
 
-const highlighterPromise = createHighlighter({
-  themes: ["github-light", "github-dark"],
-  langs: ["json", "log", "javascript"],
+const highlighterPromise = createHighlighterCore({
+  themes: [githubLight, githubDark],
+  langs: [json, log, javascript],
+  engine: createJavaScriptRegexEngine(),
 });
 
 export async function highlightCode(code: string, lang: CodeLanguage) {
