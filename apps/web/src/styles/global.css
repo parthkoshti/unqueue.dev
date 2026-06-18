@@ -1,0 +1,17 @@
+@import "@fontsource-variable/geist";
+@import "tailwindcss";
+@import "starlight-theme-nova/tailwind.css";
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.site-title {
+  gap: 0.5rem;
+}
+
+.site-title img {
+  height: 1.75rem;
+  width: 1.75rem;
+}

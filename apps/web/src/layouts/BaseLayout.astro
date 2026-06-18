@@ -1,0 +1,87 @@
+---
+import "../app.css";
+import { Nav } from "@/components/nav";
+import { Footer } from "@/components/footer";
+
+interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+  keywords?: string;
+}
+
+const {
+  title,
+  description,
+  canonical = new URL(Astro.url.pathname, Astro.site).href,
+  keywords = "BullMQ monitoring, BullMQ dashboard, Redis queue monitoring, BullMQ queue visibility, BullMQ job inspector, Node.js queue monitoring",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="keywords" content={keywords} />
+    <link rel="canonical" href={canonical} />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="unqueue" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="https://unqueue.dev/og.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@unqueuedev" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content="https://unqueue.dev/og.png" />
+
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+
+    <slot name="head" />
+
+    <script is:inline src="https://rybbit.parthkoshti.com/api/script.js" data-site-id="4f54c1e78bc3" defer></script>
+
+    <script is:inline>
+      (function () {
+        var themeToggleKey = "theme-toggle";
+        var starlightThemeKey = "starlight-theme";
+        var legacyThemeKey = "theme";
+        var novaTheme = localStorage.getItem(themeToggleKey);
+        var starlightTheme = localStorage.getItem(starlightThemeKey);
+        var legacyTheme = localStorage.getItem(legacyThemeKey);
+        var theme = novaTheme === "light" || novaTheme === "dark"
+          ? novaTheme
+          : starlightTheme === "light" || starlightTheme === "dark"
+            ? starlightTheme
+            : legacyTheme === "light" || legacyTheme === "dark"
+              ? legacyTheme
+              : "dark";
+
+        localStorage.setItem(themeToggleKey, theme);
+        localStorage.removeItem(starlightThemeKey);
+        localStorage.removeItem(legacyThemeKey);
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="flex min-h-svh flex-col">
+      <Nav client:load currentPath={Astro.url.pathname} />
+      <main class="flex-1">
+        <slot />
+      </main>
+      <Footer />
+    </div>
+  </body>
+</html>

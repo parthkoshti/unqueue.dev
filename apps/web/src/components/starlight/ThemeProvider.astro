@@ -1,0 +1,30 @@
+---
+import NovaThemeProvider from "starlight-theme-nova/components/ThemeProvider.astro";
+---
+
+<script is:inline>
+  (function () {
+    var themeToggleKey = "theme-toggle";
+    var starlightThemeKey = "starlight-theme";
+    var legacyThemeKey = "theme";
+    var novaTheme = localStorage.getItem(themeToggleKey);
+
+    if (novaTheme !== "light" && novaTheme !== "dark") {
+      var starlightTheme = localStorage.getItem(starlightThemeKey);
+      var legacyTheme = localStorage.getItem(legacyThemeKey);
+      var theme =
+        starlightTheme === "light" || starlightTheme === "dark"
+          ? starlightTheme
+          : legacyTheme === "light" || legacyTheme === "dark"
+            ? legacyTheme
+            : "dark";
+
+      localStorage.setItem(themeToggleKey, theme);
+    }
+
+    localStorage.removeItem(starlightThemeKey);
+    localStorage.removeItem(legacyThemeKey);
+  })();
+</script>
+
+<NovaThemeProvider />

@@ -1,5 +1,4 @@
 import { ArrowRightIcon } from "lucide-react";
-import { env } from "@/lib/env";
 
 export function CtaSection() {
   return (
@@ -9,21 +8,21 @@ export function CtaSection() {
           Stop debugging queues blind.
         </h2>
         <p className="mb-2 text-base text-muted-foreground">
-          Paste your Redis URL and see live queue data in under 60 seconds.
+          Self-host unqueue for free today, or join the hosted waitlist.
         </p>
         <p className="mb-8 text-sm text-muted-foreground/60">
-          Free to start. No card required. Works with every Redis provider.
+          Hosted does not exist yet. The open-source version is available now.
         </p>
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <a
-            href={env.links.signup}
+            href="/#waitlist"
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
           >
-            Connect your Redis
+            Join hosted waitlist
             <ArrowRightIcon className="size-3.5" />
           </a>
           <a
-            href="https://github.com/unqueue/unqueue"
+            href="https://github.com/parthkoshti/unqueue.dev"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"

@@ -1,9 +1,5 @@
-const appUrl = import.meta.env.VITE_APP_URL ?? "https://app.unqueue.dev";
+const apiUrl = import.meta.env.PUBLIC_API_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : "");
 
 export const env = {
-  appUrl,
-  links: {
-    login: `${appUrl}/login`,
-    signup: `${appUrl}/signup`,
-  },
+  apiUrl,
 };

@@ -38,6 +38,18 @@ export const workspaces = pgTable("workspaces", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const waitlistSubscribers = pgTable(
+  "waitlist_subscribers",
+  {
+    id: serial("id").primaryKey(),
+    email: text("email").notNull(),
+    source: text("source").notNull().default("web"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("waitlist_subscribers_email_idx").on(table.email)],
+);
+
 export const workspaceMembers = pgTable(
   "workspace_members",
   {

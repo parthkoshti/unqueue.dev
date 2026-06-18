@@ -14,6 +14,7 @@ vi.mock("./queue-runner.js", () => ({
           end: number,
           asc: boolean,
         ) => Promise<Array<{ id: string; name: string; timestamp: number; getState?: () => Promise<string> }>>;
+        getJobLogs: (jobId: string) => Promise<{ logs: string[] }>;
       }) => Promise<unknown>,
     ) => {
       const job = {
@@ -21,11 +22,14 @@ vi.mock("./queue-runner.js", () => ({
         name: "send-email",
         timestamp: 1,
         attemptsMade: 0,
+        data: { recipient: "user@example.com" },
+        progress: { percent: 50 },
         opts: {},
         getState: vi.fn().mockResolvedValue("waiting"),
       };
       return fn({
         getJobs: vi.fn().mockResolvedValue([job]),
+        getJobLogs: vi.fn().mockResolvedValue({ logs: ["sent"] }),
       });
     },
   ),
@@ -37,5 +41,8 @@ describe("listJobs", () => {
 
     expect(jobs).toHaveLength(1);
     expect(jobs[0]?.state).toBe("waiting");
+    expect(jobs[0]?.payload).toEqual({ recipient: "user@example.com" });
+    expect(jobs[0]?.progress).toEqual({ percent: 50 });
+    expect(jobs[0]?.logs).toEqual([{ format: "raw", raw: "sent" }]);
   });
 });

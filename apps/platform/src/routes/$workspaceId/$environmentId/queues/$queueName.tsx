@@ -451,6 +451,11 @@ function QueuePage() {
   };
 
   const openJobSheet = (id: string) => {
+    const job = jobs.find((candidate) => candidate.id === id);
+    if (job) {
+      queryClient.setQueryData(["job", redisInstanceId, queueName, id], job);
+    }
+
     setSheetJobId(id);
     void navigate({
       to: "/$workspaceId/$environmentId/queues/$queueName",

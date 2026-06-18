@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { createFileRoute, redirect, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { authClient } from "@/lib/auth";
 import {
   authCallbackUrl,
   refreshSession,
+  resolveAuthenticatedLanding,
   safeRedirectPath,
 } from "@/lib/auth-helpers";
 import { formatAuthError, isEmailNotVerifiedError, loginSchema } from "@/lib/auth-form";
@@ -28,10 +29,6 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/login")({
   validateSearch: searchSchema,
-  beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
-    if (session.data?.user) throw redirect({ to: "/" });
-  },
   component: LoginPage,
 });
 
@@ -39,10 +36,38 @@ function LoginPage() {
   const { redirect: redirectTo } = Route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const sessionQuery = useQuery(sessionQueryOptions());
+  const [redirectFailed, setRedirectFailed] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(
     null,
   );
+  const user = sessionQuery.data?.data?.user;
+
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+    setRedirectFailed(false);
+
+    void resolveAuthenticatedLanding(queryClient).then((landing) => {
+      if (cancelled) return;
+      if (!landing) {
+        setRedirectFailed(true);
+        return;
+      }
+
+      navigate({
+        to: landing.to,
+        params: landing.params,
+        replace: true,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, queryClient, user]);
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
@@ -98,6 +123,17 @@ function LoginPage() {
         }
       >
         <VerificationNotice email={pendingVerificationEmail} />
+      </AuthLayout>
+    );
+  }
+
+  if (user && !redirectFailed) {
+    return (
+      <AuthLayout
+        title="Redirecting"
+        description="Taking you to your workspace."
+      >
+        <p className="text-sm text-muted-foreground">Loading...</p>
       </AuthLayout>
     );
   }

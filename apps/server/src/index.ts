@@ -3,11 +3,12 @@ import { cors } from "hono/cors";
 import { RPCHandler } from "@orpc/server/fetch";
 import { createServer } from "node:http";
 import { createDb } from "@unqueue/db";
-import { redisInstances } from "@unqueue/db/schema";
+import { redisInstances, waitlistSubscribers } from "@unqueue/db/schema";
 import { createAuth } from "@unqueue/auth";
 import { createLogger } from "@unqueue/logger";
 import { createServices, getMembership } from "@unqueue/services";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { createDiscoveryCache } from "@unqueue/redis";
 import { env } from "./env.js";
 import { RealtimeManager } from "./realtime/manager.js";
@@ -18,6 +19,10 @@ import { createRpcHandlerPlugins } from "./rpc/logging.js";
 
 const logger = createLogger("server");
 const db = createDb(env.DATABASE_URL);
+const waitlistRateLimit = new Map<string, { count: number; resetAt: number }>();
+const waitlistInputSchema = z.object({
+  email: z.string().trim().email().max(320),
+});
 
 const auth = createAuth({
   db,
@@ -73,12 +78,65 @@ const app = new Hono();
 app.use(
   "*",
   cors({
-    origin: env.PLATFORM_URL,
+    origin: (origin) => {
+      const allowedOrigins = new Set([
+        env.PLATFORM_URL,
+        env.WEB_URL,
+        env.NODE_ENV === "development" ? "http://localhost:3000" : undefined,
+      ].filter(Boolean));
+
+      return allowedOrigins.has(origin) ? origin : env.PLATFORM_URL;
+    },
     credentials: true,
   }),
 );
 
 app.get("/health", (c) => c.json({ status: "ok" }));
+
+app.post("/api/waitlist", async (c) => {
+  const ip = getClientIp(c.req.raw);
+  const rateLimit = checkWaitlistRateLimit(ip);
+  if (!rateLimit.ok) {
+    return c.json(
+      { error: "Too many waitlist submissions. Try again later." },
+      429,
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body." }, 400);
+  }
+
+  const parsed = waitlistInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Enter a valid email address." }, 400);
+  }
+
+  const email = parsed.data.email.toLowerCase();
+  const userAgent = c.req.header("user-agent") ?? null;
+
+  try {
+    const inserted = await db
+      .insert(waitlistSubscribers)
+      .values({ email, userAgent })
+      .onConflictDoNothing({ target: waitlistSubscribers.email })
+      .returning({ id: waitlistSubscribers.id });
+
+    if (inserted.length > 0) {
+      await notifyDiscord(email).catch((err) => {
+        logger.error({ err, email }, "Failed to notify Discord for waitlist signup");
+      });
+    }
+
+    return c.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "Failed to store waitlist signup");
+    return c.json({ error: "Could not join the waitlist right now." }, 500);
+  }
+});
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
@@ -112,6 +170,49 @@ app.use("/rpc/*", async (c, next) => {
   if (matched) return c.newResponse(response.body, response);
   await next();
 });
+
+function getClientIp(request: Request) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  return (
+    request.headers.get("cf-connecting-ip") ??
+    forwardedFor?.split(",")[0]?.trim() ??
+    "unknown"
+  );
+}
+
+function checkWaitlistRateLimit(ip: string) {
+  const now = Date.now();
+  const windowMs = 10 * 60 * 1000;
+  const maxRequests = 5;
+  const current = waitlistRateLimit.get(ip);
+
+  if (!current || current.resetAt <= now) {
+    waitlistRateLimit.set(ip, { count: 1, resetAt: now + windowMs });
+    return { ok: true };
+  }
+
+  if (current.count >= maxRequests) return { ok: false };
+
+  current.count += 1;
+  return { ok: true };
+}
+
+async function notifyDiscord(email: string) {
+  if (!env.DISCORD_NOTIFICATION_URL) return;
+
+  const response = await fetch(env.DISCORD_NOTIFICATION_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      content: `New hosted waitlist signup: ${email}`,
+      allowed_mentions: { parse: [] },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Discord webhook returned ${response.status}`);
+  }
+}
 
 httpServer.on("request", async (req, res) => {
   // Socket.IO registers its own request handler on this server; skip those requests.

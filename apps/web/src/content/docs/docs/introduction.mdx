@@ -1,0 +1,37 @@
+---
+title: Introduction
+description: What unqueue is, how it works, and when to use it.
+---
+
+unqueue is a real-time monitoring dashboard for [BullMQ](https://docs.bullmq.io) — the Node.js queue library built on Redis. It connects directly to your Redis instance and surfaces queue state, job details, failure reasons, stack traces, and worker logs without requiring any agents, code changes, or instrumentation.
+
+## How it works
+
+unqueue reads BullMQ's Redis key schema directly. After you register a Redis connection, it discovers queues using the key prefix you configure, then subscribes to BullMQ's `QueueEvents` channel to receive live updates as jobs move through the queue.
+
+Each registered Redis instance uses **two persistent connections**: one for queue reads and admin actions, and one for `QueueEvents` realtime subscriptions.
+
+Your job data never leaves your Redis instance. Every request reads directly from Redis on demand — nothing is persisted or cached on unqueue's servers.
+
+## What you can do
+
+- **Inspect jobs** — view input data, return values, stack traces, and worker logs for any job in any state
+- **Monitor queues** — see active, waiting, delayed, and failed counts update in real time
+- **Take action** — retry or remove jobs, pause queues, drain backlogs, clean completed jobs, or obliterate queues from the dashboard
+- **Bookmark jobs** — save jobs you want to revisit later
+- **Get alerted** — configure Discord webhooks when failure rates spike or queues stall
+- **Organize by workspace** — group environments (prod, staging, dev) and manage team access
+
+## Requirements
+
+- BullMQ v3 or v4
+- Redis 6+ for the instances you monitor (Redis Cloud, Upstash, ElastiCache, Aiven, Azure Cache, and self-hosted are supported)
+- Node.js workers using standard BullMQ queue names and key prefixes
+
+For self-hosting unqueue itself, you also need Node.js 24+, PostgreSQL 18+, and Redis for unqueue's internal services. See [Docker Compose setup](/docs/self-hosting).
+
+## Next steps
+
+- [Connect your Redis](/docs/connecting-redis) — ACL permissions, TLS, and connection URL format
+- [Self-host with Docker Compose](/docs/self-hosting) — run the full stack on your infrastructure
+- [Configuration reference](/docs/configuration) — environment variables

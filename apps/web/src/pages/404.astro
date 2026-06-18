@@ -1,0 +1,21 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Page not found — unqueue"
+  description="The page you requested could not be found."
+>
+  <div class="mx-auto max-w-2xl px-4 py-40 text-center sm:px-6">
+    <p class="mb-3 font-mono text-xs text-muted-foreground">404</p>
+    <h1 class="mb-4 text-2xl font-bold tracking-tight text-foreground">
+      Page not found
+    </h1>
+    <p class="mb-8 text-muted-foreground">
+      This page doesn't exist or may have moved.
+    </p>
+    <a href="/" class="text-sm text-primary hover:underline underline-offset-4">
+      ← Back home
+    </a>
+  </div>
+</BaseLayout>

@@ -22,6 +22,13 @@
       "when": 1781112425311,
       "tag": "0002_deep_xorn",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781763548022,
+      "tag": "0003_fixed_zaran",
+      "breakpoints": true
     }
   ]
 }

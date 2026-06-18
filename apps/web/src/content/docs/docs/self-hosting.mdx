@@ -1,0 +1,197 @@
+---
+title: Docker Compose Setup
+description: Run unqueue on your own infrastructure using Docker Compose.
+---
+
+unqueue is AGPL-3.0 licensed. The self-hosted version is identical to the cloud version — no features are gated.
+
+This guide covers the two-stack Docker Compose layout used in this repository: an **infrastructure** stack (Postgres, PgBouncer, Redis) and an **app** stack (API server + platform UI).
+
+## Prerequisites
+
+- Docker 20.10+
+- Docker Compose v2 (`docker compose`, not `docker-compose`)
+- Node.js 24+ and pnpm 11+ (only needed to run database migrations from your machine)
+
+## 1. Clone the repository
+
+```bash
+git clone https://github.com/parthkoshti/unqueue.dev.git
+cd unqueue
+```
+
+## 2. Start infrastructure
+
+Copy `.env.infra.example` values into your compose environment (or a local `.env` file) and start Postgres, PgBouncer, and Redis:
+
+```bash
+docker compose -f docker-compose.infra.yml up -d
+```
+
+| Service   | Default host port | Notes                                     |
+| --------- | ----------------- | ----------------------------------------- |
+| PgBouncer | `6432`            | App connects here — not Postgres directly |
+| Redis     | `6379`            | Password required (`REDIS_PASSWORD`)      |
+
+See `.env.infra.example` for the full variable list.
+
+## 3. Configure the app
+
+Copy `.env.example` to `.env` and set at minimum:
+
+```bash
+# Connect via PgBouncer (not Postgres directly)
+DATABASE_URL=postgresql://unqueue:password@localhost:6432/unqueue
+
+# unqueue's internal Redis (not the Redis you monitor in the dashboard)
+REDIS_URL=redis://:password@localhost:6379
+
+# Auth — generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=your-secret-here
+
+# Public URLs — browsers call these directly
+PLATFORM_URL=http://localhost:5174
+BETTER_AUTH_URL=http://localhost:3001
+
+# Required — encrypts stored Redis credentials
+ENCRYPTION_KEYS=[{"keyId":1,"key":"..."}]
+```
+
+Generate `ENCRYPTION_KEYS`:
+
+```bash
+node -e "console.log(JSON.stringify([{keyId:1,key:require('crypto').randomBytes(32).toString('base64')}]))"
+```
+
+For production builds, also set `VITE_API_URL` to the public API origin (e.g. `https://api.your-domain.com`). The platform image inlines this at build time.
+
+See [Configuration](/docs/configuration) for the full reference.
+
+## 4. Run database migrations
+
+Migrations do **not** run automatically on container startup. From the repo root:
+
+```bash
+pnpm install
+pnpm db:migrate
+```
+
+Ensure `DATABASE_URL` in your environment points at the running PgBouncer instance before migrating.
+
+## 5. Start the app stack
+
+```bash
+docker compose up --build -d
+```
+
+Or with Doppler-managed secrets (if configured):
+
+```bash
+pnpm compose:up:build
+```
+
+| Service       | Default host port | Notes                             |
+| ------------- | ----------------- | --------------------------------- |
+| Platform (UI) | `5174`            | nginx serving the built React app |
+| API server    | `3001`            | Hono + oRPC + Socket.IO           |
+
+Open `http://localhost:5174`, create an account, then [connect your BullMQ Redis](/docs/connecting-redis).
+
+## Updating
+
+Pull the latest changes, rebuild, and re-run migrations if the schema changed:
+
+```bash
+git pull
+pnpm db:migrate
+docker compose up -d --build
+```
+
+## Production deployment
+
+For production, deploy the infra and app stacks separately (e.g. two Dokploy compose projects on the same network):
+
+- **Infra stack:** `docker-compose.infra.yml` — set variables from `.env.infra.example`
+- **App stack:** `docker-compose.yml` — set variables from `.env.example` or Doppler
+
+When both stacks share a Docker network, use in-network hostnames:
+
+```bash
+DATABASE_URL=postgresql://unqueue:PASSWORD@pgbouncer:5432/unqueue
+REDIS_URL=redis://:REDIS_PASSWORD@redis:6379
+```
+
+Set `COOKIE_DOMAIN` to your parent domain (e.g. `.your-domain.com`) so auth cookies work across platform and API subdomains.
+
+## Reverse proxy
+
+The platform and API run on separate origins in production. Example Nginx config:
+
+```nginx
+# Platform (frontend)
+server {
+    listen 443 ssl;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:5174;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# API server
+server {
+    listen 443 ssl;
+    server_name api.your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Required for live queue events (Socket.IO)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+[Caddy](https://caddyserver.com) handles TLS automatically if you prefer:
+
+```caddy
+your-domain.com {
+    reverse_proxy localhost:5174
+}
+
+api.your-domain.com {
+    reverse_proxy localhost:3001
+}
+```
+
+## Troubleshooting
+
+**The platform can't reach the API server**
+
+Make sure `VITE_API_URL` was set to the public API URL when the platform image was built, and that `BETTER_AUTH_URL` points to the same API origin — not `localhost`.
+
+**Jobs aren't updating in real time**
+
+Check that your reverse proxy forwards WebSocket upgrades (`Upgrade` and `Connection` headers). Live updates use Socket.IO.
+
+**Database migrations failed**
+
+Verify `DATABASE_URL` points at PgBouncer and Postgres is healthy, then run migrations from the repo root:
+
+```bash
+pnpm db:migrate
+```
+
+**Auth cookies don't persist across subdomains**
+
+Set `COOKIE_DOMAIN` to the parent domain with a leading dot (e.g. `.your-domain.com`).

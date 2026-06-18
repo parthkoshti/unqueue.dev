@@ -21,7 +21,10 @@ const steps = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative overflow-hidden border-t border-border/50 py-24">
+    <section
+      id="how-it-works"
+      className="relative scroll-mt-24 overflow-hidden border-t border-border/50 py-24"
+    >
       {/* background glow */}
       <div
         aria-hidden
@@ -43,7 +46,7 @@ export function HowItWorksSection() {
 
         <div className="relative">
           {/* connector line */}
-          <div className="absolute left-[1.1rem] top-6 hidden h-[calc(100%-3rem)] w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent sm:block" />
+          <div className="absolute left-[1.1rem] top-6 hidden h-[calc(100%-3rem)] w-px bg-linear-to-b from-primary/40 via-primary/20 to-transparent sm:block" />
 
           <div className="flex flex-col gap-10">
             {steps.map((step, i) => (

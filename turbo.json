@@ -24,7 +24,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],
-      "env": ["VITE_API_URL"]
+      "env": ["VITE_API_URL", "PUBLIC_APP_URL"]
     },
     "dev": {
       "dependsOn": ["^build"],

@@ -1,0 +1,48 @@
+---
+title: Connecting Redis
+description: Register BullMQ Redis instances in unqueue — ACL permissions, TLS, and URL format.
+---
+
+unqueue connects to **your** Redis instances — separate from the app's own `REDIS_URL` used for internal services. Add connections from **Settings** inside a workspace environment.
+
+## Recommended setup
+
+1. Create a **dedicated ACL user** per environment — do not share the `default` superuser.
+2. Use **TLS** (`rediss://`) for managed providers (Redis Cloud, Upstash, ElastiCache, Azure Cache).
+3. If your provider requires ACL auth, set **username** and password in the connection form.
+4. Match the **BullMQ key prefix** to what your workers use (default: `bull`).
+
+## ACL permissions
+
+**Monitoring only** (view queues, jobs, metrics, and bookmarks):
+
+- `@read` on BullMQ keys, or at minimum: `SCAN`, `GET`, `HGET`, `HGETALL`, `LRANGE`, `ZRANGE`, `ZCARD`, `LLEN`, `TYPE`, `PING`, `INFO`, `SUBSCRIBE` / `PSUBSCRIBE` (for events)
+
+**Admin actions** (retry/remove jobs, pause/drain/clean/obliterate queues):
+
+- The read permissions above, plus write commands BullMQ uses: `DEL`, `HDEL`, `HSET`, `LPUSH`, `RPUSH`, `ZADD`, `ZREM`, `LREM`, `EVAL` / `EVALSHA`, `MULTI`, `EXEC`, and similar.
+
+Example Redis 7 ACL (adjust key patterns to your prefix):
+
+```
+ACL SETUSER unqueue-read on >your-password ~bull:* &* +@read +ping +info +psubscribe +subscribe
+ACL SETUSER unqueue-admin on >your-password ~bull:* &* +@read +@write +@pubsub +ping +info
+```
+
+## Connection URL format
+
+```
+rediss://username:password@host:6380/0
+```
+
+Paste a URL in the connection form to pre-fill host, port, username, password, DB index, and TLS.
+
+## What unqueue reads from Redis
+
+unqueue does not poll your keyspace on a schedule. It:
+
+1. Discovers queues from BullMQ's key schema using your configured prefix
+2. Subscribes to `QueueEvents` for live job and queue updates
+3. Reads job and queue data on demand when you open a view in the dashboard
+
+This keeps overhead minimal — typically one pub/sub connection per registered Redis instance plus read commands when you browse jobs.

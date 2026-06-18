@@ -34,18 +34,21 @@ unqueue reads directly from your Redis instance on demand. No job data is stored
 
 ## Licensing
 
-AGPL-3.0. Source code available at https://github.com/unqueue/unqueue. The self-hosted version is identical to the cloud version — no features gated.
+AGPL-3.0. Source code available at https://github.com/parthkoshti/unqueue.dev. The self-hosted version is identical to the cloud version — no features gated.
 
-## Pricing
+## Waitlist
 
-Free to start. No credit card required.
-See https://unqueue.dev for current plan details.
+Hosted unqueue is coming soon. The waitlist is only for the hosted version. The open-source self-hosted version is free and available today.
+See https://unqueue.dev/#waitlist for current hosted availability details.
 
 ## Key pages
 
 - Homepage: https://unqueue.dev
-- Sign up: https://app.unqueue.dev/signup
-- Login: https://app.unqueue.dev/login
+- Hosted waitlist: https://unqueue.dev/#waitlist
+- Docs: https://unqueue.dev/docs/introduction
+- Connecting Redis: https://unqueue.dev/docs/connecting-redis
 - Blog: https://unqueue.dev/blog
-- Self-host docs: https://github.com/unqueue/unqueue#docker--dokploy
-- Source code: https://github.com/unqueue/unqueue
+- Blog — Getting started: https://unqueue.dev/blog/getting-started-with-unqueue
+- Blog — Why queue monitoring matters: https://unqueue.dev/blog/why-queue-monitoring-matters
+- Self-host docs: https://unqueue.dev/docs/self-hosting
+- Source code: https://github.com/parthkoshti/unqueue.dev

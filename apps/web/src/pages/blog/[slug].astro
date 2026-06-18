@@ -1,0 +1,84 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { getCollection, getEntry, render } from "astro:content";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  return posts.map((post) => ({
+    params: { slug: post.id },
+  }));
+}
+
+const { slug } = Astro.params;
+const post = await getEntry("blog", slug!);
+
+if (!post) {
+  return Astro.redirect("/404");
+}
+
+const { Content } = await render(post);
+const { title, description, date, author, tags } = post.data;
+
+function formatDate(value: Date) {
+  return value.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+---
+
+<BaseLayout
+  title={`${title} — unqueue`}
+  description={description}
+  canonical={`https://unqueue.dev/blog/${slug}`}
+>
+  <div class="mx-auto max-w-2xl px-4 sm:px-6">
+    <div class="pt-28 pb-12">
+      <a
+        href="/blog"
+        class="font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        ← Writing
+      </a>
+    </div>
+
+    <header class="mb-16 border-b border-border/60 pb-10">
+      <div class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <time class="font-mono text-xs text-muted-foreground">
+          {formatDate(date)}
+        </time>
+        {
+          tags && tags.length > 0 && (
+            <>
+              <span class="text-border" aria-hidden="true">
+                ·
+              </span>
+              <span class="font-mono text-xs text-muted-foreground/70">
+                {tags.join(" · ")}
+              </span>
+            </>
+          )
+        }
+      </div>
+
+      <h1 class="mb-5 text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
+        {title}
+      </h1>
+
+      <p class="text-base leading-relaxed text-muted-foreground">
+        {description}
+      </p>
+
+      {
+        author && (
+          <p class="mt-7 font-mono text-xs text-muted-foreground">{author}</p>
+        )
+      }
+    </header>
+
+    <div class="prose pb-24">
+      <Content />
+    </div>
+  </div>
+</BaseLayout>

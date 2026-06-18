@@ -1,10 +1,11 @@
 {
-  "extends": "@unqueue/config/typescript/react",
+  "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "jsx": "react-jsx"
   },
-  "include": ["src/**/*", "vite.config.ts"]
+  "include": ["src/**/*", "astro.config.mjs"]
 }

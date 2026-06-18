@@ -13,6 +13,9 @@ export type EnvironmentQueueRow = {
     completed: number;
     failed: number;
     paused: number;
+    prioritized: number;
+    "waiting-children": number;
+    schedulers: number;
   };
 };
 

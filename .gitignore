@@ -10,4 +10,7 @@ doppler.env
 .DS_Store
 coverage
 *.tsbuildinfo
+.astro
 /out
+
+.pnpm-store

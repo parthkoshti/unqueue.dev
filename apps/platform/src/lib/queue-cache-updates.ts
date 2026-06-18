@@ -75,6 +75,9 @@ export function applyQueueAdded(
             completed: 0,
             failed: 0,
             paused: 0,
+            prioritized: 0,
+            "waiting-children": 0,
+            schedulers: 0,
           },
         },
       ];

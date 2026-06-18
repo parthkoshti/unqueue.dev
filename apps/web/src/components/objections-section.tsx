@@ -5,13 +5,19 @@ const objections = [
     question: "My job payloads contain sensitive data.",
     answer:
       "unqueue never stores your job data. Every request reads directly from your Redis instance on demand — nothing is persisted, cached, or transmitted elsewhere. If that's not enough, self-host with a single docker compose up. You control the infrastructure.",
-    action: { label: "Self-host docs →", href: "https://github.com/unqueue/unqueue#docker--dokploy" },
+    action: {
+      label: "Self-host docs →",
+      href: "https://github.com/parthkoshti/unqueue.dev#docker--dokploy",
+    },
   },
   {
     question: "What if you shut down or start charging?",
     answer:
       "AGPL-3.0. Every line of code is on GitHub — fork it, run it, own it. The self-hosted version is identical to the cloud version, no features gated. You're never locked in.",
-    action: { label: "View source →", href: "https://github.com/unqueue/unqueue" },
+    action: {
+      label: "View source →",
+      href: "https://github.com/parthkoshti/unqueue.dev",
+    },
   },
   {
     question: "We already have Datadog and Grafana.",
@@ -57,13 +63,16 @@ export function ObjectionsSection() {
         {/* Open source strip */}
         <div className="mt-16 flex flex-col gap-4 rounded-2xl border border-border bg-card/50 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-semibold text-foreground">Open source. No black boxes.</p>
+            <p className="font-semibold text-foreground">
+              Open source. No black boxes.
+            </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              AGPL-3.0 · React + Hono · Docker Compose deploy · Self-hosted = same software
+              AGPL-3.0 · React + Hono · Docker Compose deploy · Self-hosted =
+              same software
             </p>
           </div>
           <a
-            href="https://github.com/unqueue/unqueue"
+            href="https://github.com/parthkoshti/unqueue.dev"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"

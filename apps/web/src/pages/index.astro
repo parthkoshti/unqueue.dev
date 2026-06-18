@@ -1,0 +1,157 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { HeroSection } from "@/components/hero-section";
+import { ProblemSection } from "@/components/problem-section";
+import { FeaturesSection } from "@/components/features-section";
+import { HowItWorksSection } from "@/components/how-it-works";
+import { ObjectionsSection } from "@/components/objections-section";
+import { FaqSection } from "@/components/faq-section";
+import { CtaSection } from "@/components/cta-section";
+
+const title = "unqueue — BullMQ Monitoring Dashboard";
+const description =
+  "Real-time visibility into every BullMQ queue, job, failure, and worker log. Paste your Redis URL and get live data in under 60 seconds. No agents, no code changes, no stored data.";
+---
+
+<BaseLayout title={title} description={description} canonical="https://unqueue.dev/">
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "unqueue",
+      url: "https://unqueue.dev",
+      logo: "https://unqueue.dev/favicon.svg",
+      description:
+        "BullMQ monitoring dashboard that reads directly from Redis. Real-time queue and job visibility with no agents, no code changes, and no stored job data.",
+      sameAs: ["https://github.com/parthkoshti/unqueue.dev"],
+    })} />
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "unqueue",
+      url: "https://unqueue.dev",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web",
+      description:
+        "Real-time BullMQ monitoring dashboard. Connects to your Redis instance directly to surface queue state, job details, failure reasons, stack traces, and worker logs. No agents, no instrumentation, no stored data.",
+      featureList: [
+        "Real-time BullMQ queue monitoring",
+        "Job inspection with input data, output, and stack traces",
+        "Automatic queue discovery via BullMQ key schema",
+        "Admin actions: retry, pause, drain, obliterate",
+        "Worker log capture tied to individual jobs",
+        "Discord alerts for queue spikes and failure rate thresholds",
+        "Support for Redis Cloud, Upstash, ElastiCache, Aiven, Azure Cache, self-hosted Redis",
+      ],
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+        description: "Free to start. No credit card required.",
+      },
+      softwareVersion: "1.0",
+      license: "https://www.gnu.org/licenses/agpl-3.0.html",
+    })} />
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "unqueue",
+      url: "https://unqueue.dev",
+    })} />
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      name: "How to set up BullMQ monitoring with unqueue",
+      description: "Get live visibility into your BullMQ queues in under 60 seconds.",
+      totalTime: "PT1M",
+      step: [
+        {
+          "@type": "HowToStep",
+          position: 1,
+          name: "Paste your Redis connection URL",
+          text: "Connect your Redis instance using a TLS connection URL. All major managed providers are supported including Redis Cloud, Upstash, ElastiCache, and Aiven. A read-only ACL user is recommended for monitoring.",
+        },
+        {
+          "@type": "HowToStep",
+          position: 2,
+          name: "Queues appear automatically",
+          text: "unqueue scans your Redis keyspace using BullMQ's key schema. All existing BullMQ queues are discovered automatically. New queues appear the moment workers create them — no registration required.",
+        },
+        {
+          "@type": "HowToStep",
+          position: 3,
+          name: "Watch jobs in real time",
+          text: "Live updates stream via BullMQ's QueueEvents subscription. Click any job to inspect its input data, return value, worker logs, and failure details including full stack trace.",
+        },
+      ],
+    })} />
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "Which BullMQ versions does unqueue support?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "unqueue supports BullMQ v3 and v4. It reads BullMQ's Redis key schema directly, so no changes are needed to your workers as long as you are on a supported version.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "What Redis permissions does unqueue need?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Read-only access is sufficient for monitoring — browsing queues, inspecting jobs, and viewing logs. Write access is required only for admin actions like retrying jobs, pausing queues, or draining backlogs.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Does unqueue add overhead to my Redis instance?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Minimal. unqueue subscribes to BullMQ's QueueEvents channel (a single pub/sub connection) and issues read commands on demand when you open a job or queue. It does not poll continuously or scan keyspaces on a schedule.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Can I connect multiple Redis instances to unqueue?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. You can add as many Redis connections as you need — one per environment, region, or microservice. Each connection is managed separately and shows its own set of queues.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Does unqueue work with BullMQ Pro?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. BullMQ Pro uses the same underlying Redis schema for standard queue and job data. Pro-specific features like groups are displayed where applicable.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Does unqueue store my job data?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "No. unqueue never stores your job data. Every request reads directly from your Redis instance on demand — nothing is persisted, cached, or transmitted to unqueue's servers. Your job data stays in your Redis instance.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Does unqueue work with custom BullMQ key prefixes?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. unqueue lets you configure a custom key prefix per Redis connection, matching whatever prefix you pass to your BullMQ Queue constructor.",
+          },
+        },
+      ],
+    })} />
+
+  <HeroSection client:load />
+  <HowItWorksSection />
+  <ProblemSection />
+  <FeaturesSection />
+  <ObjectionsSection />
+  <FaqSection client:load />
+  <CtaSection />
+</BaseLayout>

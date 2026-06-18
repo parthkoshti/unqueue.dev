@@ -26,4 +26,4 @@ Allow: /
 User-agent: Googlebot
 Allow: /
 
-Sitemap: https://unqueue.dev/sitemap.xml
+Sitemap: https://unqueue.dev/sitemap-index.xml

@@ -84,13 +84,8 @@ function DetailRow({
   );
 }
 
-function summaryToPlaceholder(job: JobSummary): JobDetail {
-  return {
-    ...job,
-    payload: null,
-    progress: null,
-    logs: [],
-  };
+function isJobDetail(job: JobDetail | JobSummary | undefined): job is JobDetail {
+  return !!job && "payload" in job && "progress" in job && "logs" in job;
 }
 
 export function JobDetailPanel({
@@ -107,7 +102,7 @@ export function JobDetailPanel({
   redisInstanceId: string;
   queueName: string;
   jobId: string;
-  listJob?: JobSummary;
+  listJob?: JobDetail | JobSummary;
   canWrite?: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -138,10 +133,13 @@ export function JobDetailPanel({
     };
   }, [jobRoom, jobId, queueName, queryClient, redisInstanceId]);
 
+  const listJobDetail = isJobDetail(listJob) ? listJob : undefined;
+
   const jobQuery = useQuery({
     queryKey: ["job", redisInstanceId, queueName, jobId],
     queryFn: () => rpcClient.job.get({ redisInstanceId, queueName, jobId }),
-    placeholderData: listJob ? summaryToPlaceholder(listJob) : undefined,
+    initialData: listJobDetail,
+    staleTime: listJobDetail ? Number.POSITIVE_INFINITY : 0,
   });
 
   const invalidateJob = () => {
@@ -158,8 +156,7 @@ export function JobDetailPanel({
 
   const job = jobQuery.data;
   const showSummarySkeleton = jobQuery.isLoading;
-  const isLoadingHeavyFields =
-    jobQuery.isPlaceholderData || jobQuery.isFetching;
+  const isLoadingHeavyFields = !job && jobQuery.isLoading;
   const created = formatJobTimestamp(job?.timestamp);
   const started = formatJobTimestamp(job?.processedOn);
   const finished = formatJobTimestamp(job?.finishedOn);

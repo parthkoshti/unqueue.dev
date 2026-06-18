@@ -1,4 +1,4 @@
-import { Job } from "bullmq";
+import { Job, type Queue } from "bullmq";
 import type { RedisConnection } from "./redis-types.js";
 import { withQueue } from "./queue-runner.js";
 import type { QueuePoolContext } from "./queue-pool-context.js";
@@ -67,29 +67,31 @@ const JOB_STATES = [
 export type JobState = (typeof JOB_STATES)[number];
 export type JobListState = JobState | "all" | "schedulers";
 
-async function toJobSummaries(
+async function toJobDetails(
+  queue: Queue,
   jobs: (Job | undefined)[],
   knownState?: JobState,
-): Promise<JobSummary[]> {
+): Promise<JobDetail[]> {
   const filtered = jobs.filter((job): job is Job => job != null);
 
-  if (knownState) {
-    return filtered
-      .map((job) => ({
-        ...toJobSummary(job),
-        state: knownState,
-      }))
-      .sort((a, b) => b.timestamp - a.timestamp);
-  }
+  const details = await Promise.all(
+    filtered.map(async (job) => {
+      const [jobState, logsResult] = await Promise.all([
+        knownState ?? job.getState(),
+        job.id ? queue.getJobLogs(job.id) : Promise.resolve({ logs: [] }),
+      ]);
 
-  const summaries = await Promise.all(
-    filtered.map(async (job) => ({
-      ...toJobSummary(job),
-      state: await job.getState(),
-    })),
+      return {
+        ...toJobSummary(job),
+        state: jobState,
+        payload: job.data,
+        progress: job.progress,
+        logs: logsResult.logs.map(parseLogLine),
+      };
+    }),
   );
 
-  return summaries.sort((a, b) => b.timestamp - a.timestamp);
+  return details.sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export async function listJobs(
@@ -100,7 +102,7 @@ export async function listJobs(
   start = 0,
   end = 49,
   pool?: QueuePoolContext,
-): Promise<JobSummary[]> {
+): Promise<JobDetail[]> {
   if (state === "schedulers") {
     return [];
   }
@@ -123,7 +125,7 @@ export async function listJobs(
         const batches = await Promise.all(
           nonEmptyStates.map(async (jobState) => {
             const jobs = await queue.getJobs([jobState], 0, perStateCap, false);
-            return toJobSummaries(jobs, jobState);
+            return toJobDetails(queue, jobs, jobState);
           }),
         );
         const seen = new Set<string>();
@@ -139,7 +141,7 @@ export async function listJobs(
       }
 
       const jobs = await queue.getJobs([state], start, end, false);
-      return toJobSummaries(jobs, state);
+      return toJobDetails(queue, jobs, state);
     },
     pool,
   );
