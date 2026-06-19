@@ -18,6 +18,7 @@ import { appRouter } from "@unqueue/orpc";
 import { createRpcHandlerPlugins } from "./rpc/logging.js";
 
 const logger = createLogger("server");
+logger.info({ PLATFORM_URL: env.PLATFORM_URL, WEB_URL: env.WEB_URL }, "CORS allowed origins");
 const db = createDb(env.DATABASE_URL);
 const waitlistRateLimit = new Map<string, { count: number; resetAt: number }>();
 const waitlistInputSchema = z.object({
