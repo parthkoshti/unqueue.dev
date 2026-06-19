@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { RPCHandler } from "@orpc/server/fetch";
 import { createServer } from "node:http";
-import { createDb } from "@unqueue/db";
+import { createDb, runMigrations } from "@unqueue/db";
 import { redisInstances, waitlistSubscribers } from "@unqueue/db/schema";
 import { createAuth } from "@unqueue/auth";
 import { createLogger } from "@unqueue/logger";
@@ -253,6 +253,9 @@ httpServer.on("request", async (req, res) => {
     res.end();
   }
 });
+
+await runMigrations(env.DATABASE_URL);
+logger.info("Database migrations complete");
 
 httpServer.listen(Number(env.PORT), () => {
   logger.info(`Server listening on http://localhost:${env.PORT}`);
