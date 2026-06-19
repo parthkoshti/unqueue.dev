@@ -6,6 +6,7 @@ import { rpcClient } from "@/lib/api";
 import type { JobDetail, JobSummary, ParsedLog } from "@unqueue/bullmq";
 import { cn } from "@/lib/utils";
 import {
+  onResync,
   onSocketEvent,
   subscribeRooms,
   unsubscribeRooms,
@@ -88,6 +89,35 @@ function isJobDetail(job: JobDetail | JobSummary | undefined): job is JobDetail 
   return !!job && "payload" in job && "progress" in job && "logs" in job;
 }
 
+function mergeJobUpdate(
+  current: JobDetail | JobSummary | null | undefined,
+  incoming: JobSummary,
+): JobDetail | JobSummary {
+  if (!current) return incoming;
+  return {
+    ...current,
+    ...incoming,
+    name: incoming.name || current.name,
+    timestamp: incoming.timestamp || current.timestamp,
+    processedOn: incoming.processedOn ?? current.processedOn,
+    finishedOn: incoming.finishedOn ?? current.finishedOn,
+    failedReason: incoming.failedReason ?? current.failedReason,
+    delay: incoming.delay ?? current.delay,
+    priority: incoming.priority ?? current.priority,
+    stacktrace: incoming.stacktrace ?? current.stacktrace,
+    returnValue: incoming.returnValue ?? current.returnValue,
+    opts: incoming.opts ?? current.opts,
+  };
+}
+
+function mergeProgressUpdate(
+  current: JobDetail | JobSummary | null | undefined,
+  progress: unknown,
+): JobDetail | JobSummary | null | undefined {
+  if (!current) return current;
+  return { ...current, progress };
+}
+
 export function JobDetailPanel({
   workspaceId,
   environmentId,
@@ -112,22 +142,49 @@ export function JobDetailPanel({
   const jobRoom = `job:${redisInstanceId}:${queueName}:${jobId}`;
 
   useEffect(() => {
+    const queryKey = ["job", redisInstanceId, queueName, jobId] as const;
+
     subscribeRooms([jobRoom]);
 
     const offEvent = onSocketEvent((data) => {
       if (data.room !== jobRoom) return;
+
+      if (data.type === "job:update") {
+        const payload = data.payload as { job?: JobSummary };
+        if (payload.job) {
+          queryClient.setQueryData<JobDetail | JobSummary | null | undefined>(
+            queryKey,
+            (old) => mergeJobUpdate(old, payload.job!),
+          );
+        }
+      }
+
+      if (data.type === "job:progress") {
+        const payload = data.payload as { progress?: unknown };
+        queryClient.setQueryData<JobDetail | JobSummary | null | undefined>(
+          queryKey,
+          (old) => mergeProgressUpdate(old, payload.progress),
+        );
+      }
+
       if (data.type === "job:update" || data.type === "job:progress") {
         if (jobInvalidateTimer.current) clearTimeout(jobInvalidateTimer.current);
         jobInvalidateTimer.current = setTimeout(() => {
           void queryClient.invalidateQueries({
-            queryKey: ["job", redisInstanceId, queueName, jobId],
+            queryKey,
           });
         }, 500);
       }
     });
 
+    const offResync = onResync((data) => {
+      if (data.room !== jobRoom) return;
+      void queryClient.invalidateQueries({ queryKey });
+    });
+
     return () => {
       offEvent();
+      offResync();
       unsubscribeRooms([jobRoom]);
       if (jobInvalidateTimer.current) clearTimeout(jobInvalidateTimer.current);
     };
@@ -165,21 +222,12 @@ export function JobDetailPanel({
 
   return (
     <>
-      <SheetHeader className="shrink-0 gap-3 border-b px-4 py-4 pr-12">
-        <div className="flex flex-col gap-3">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <SheetTitle>
-              Job <span className="font-mono">{jobId}</span>
-            </SheetTitle>
-            {showSummarySkeleton ? (
-              <Skeleton className="h-3.5 w-48" />
-            ) : (
-              job && (
-                <SheetDescription className="truncate">{job.name}</SheetDescription>
-              )
-            )}
-          </div>
-          <div className="flex flex-wrap gap-1">
+      <SheetHeader className="shrink-0 gap-2 border-b px-4 py-4 pr-12">
+        <div className="flex items-start justify-between gap-3">
+          <SheetTitle className="min-w-0 flex-1 truncate">
+            Job <span className="font-mono">{jobId}</span>
+          </SheetTitle>
+          <div className="flex shrink-0 flex-wrap justify-end gap-1">
             <Button
               size="sm"
               variant="outline"
@@ -227,6 +275,13 @@ export function JobDetailPanel({
             </Button>
           </div>
         </div>
+        {showSummarySkeleton ? (
+          <Skeleton className="h-3.5 w-48" />
+        ) : (
+          job && (
+            <SheetDescription className="truncate">{job.name}</SheetDescription>
+          )
+        )}
       </SheetHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">

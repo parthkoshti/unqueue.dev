@@ -134,11 +134,25 @@ const environmentRouter = {
     }),
 
   create: base
-    .input(z.object({ workspaceId: z.string().length(24), name: z.string().min(1) }))
+    .input(z.object({ workspaceId: z.string().length(24), name: z.string().trim().min(1).max(100) }))
     .use(authed)
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
       return context.services.environment.create(input);
+    }),
+
+  rename: base
+    .input(
+      z.object({
+        workspaceId: z.string().length(24),
+        id: z.string().length(24),
+        name: z.string().trim().min(1).max(100),
+      }),
+    )
+    .use(authed)
+    .use(requireRole("admin"))
+    .handler(async ({ context, input }) => {
+      return context.services.environment.rename(input);
     }),
 };
 

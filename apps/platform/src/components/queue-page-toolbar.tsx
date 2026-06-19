@@ -14,7 +14,7 @@ import {
   PlayCircleIcon,
   RefreshCwIcon,
   HistoryIcon,
-  SparklesIcon,
+  ListMinusIcon,
   TimerIcon,
   Trash2Icon,
   XCircleIcon,
@@ -223,7 +223,7 @@ export function QueuePageHeader({
               Resume
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onAction("drain")}>
-              <SparklesIcon />
+              <ListMinusIcon />
               Drain
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onAction("clean")}>

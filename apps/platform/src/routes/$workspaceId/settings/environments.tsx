@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
-import { PlusIcon, RefreshCwIcon, ServerIcon } from "lucide-react";
+import { PencilIcon, PlusIcon, RefreshCwIcon, ServerIcon } from "lucide-react";
 import { z } from "zod";
 import { DEFAULT_ENVIRONMENT_NAMES } from "@unqueue/shared";
 import { rpcClient } from "@/lib/api";
@@ -25,6 +25,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+
+type Environment = Awaited<ReturnType<typeof rpcClient.environment.list>>[number];
 
 export const Route = createFileRoute("/$workspaceId/settings/environments")({
   loader: ({ context, params }) =>
@@ -149,10 +151,114 @@ function CreateEnvironmentForm({
   );
 }
 
+function EditEnvironmentForm({
+  workspaceId,
+  environment,
+  onSuccess,
+  onCancel,
+}: {
+  workspaceId: string;
+  environment: Environment;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const form = useForm({
+    defaultValues: { name: environment.name },
+    onSubmit: async ({ value }) => {
+      const parsed = z
+        .object({
+          name: z.string().trim().min(1, "Name is required").max(100),
+        })
+        .safeParse(value);
+
+      if (!parsed.success) {
+        setFormError(parsed.error.errors[0]?.message ?? "Invalid form values");
+        return;
+      }
+
+      if (parsed.data.name === environment.name) {
+        onCancel();
+        return;
+      }
+
+      setFormError(null);
+
+      try {
+        await rpcClient.environment.rename({
+          workspaceId,
+          id: environment.id,
+          name: parsed.data.name,
+        });
+        onSuccess();
+      } catch (error) {
+        setFormError(
+          error instanceof Error ? error.message : "Failed to rename environment",
+        );
+      }
+    },
+  });
+
+  return (
+    <form
+      className="flex min-h-0 flex-1 flex-col"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void form.handleSubmit();
+      }}
+    >
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        <form.Field
+          name="name"
+          validators={{
+            onChange: ({ value }) =>
+              !value.trim() ? "Name is required" : undefined,
+          }}
+        >
+          {(field) => (
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-environment-name">Environment name</Label>
+              <Input
+                id="edit-environment-name"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                aria-invalid={!!field.state.meta.errors.length}
+                autoFocus
+              />
+              {field.state.meta.errors[0] && (
+                <p className="text-xs text-destructive">
+                  {field.state.meta.errors[0]}
+                </p>
+              )}
+            </div>
+          )}
+        </form.Field>
+
+        {formError && (
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {formError}
+          </p>
+        )}
+      </div>
+
+      <SheetFooter className="border-t">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" loading={form.state.isSubmitting} loadingText="Saving...">
+          Save changes
+        </Button>
+      </SheetFooter>
+    </form>
+  );
+}
+
 function EnvironmentsSettings() {
   const { workspaceId } = Route.useParams();
   const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
 
   const workspacesQuery = useQuery({
     queryKey: ["workspaces"],
@@ -248,6 +354,9 @@ function EnvironmentsSettings() {
                 <tr className="border-b border-border text-left">
                   <th className={thClass}>Environment</th>
                   <th className={thClass}>Created</th>
+                  {canManage && (
+                    <th className={cn(thClass, "w-0 text-right")}>Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -257,7 +366,21 @@ function EnvironmentsSettings() {
                   return (
                     <tr
                       key={environment.id}
-                      className="border-b border-border/60 last:border-0"
+                      className={cn(
+                        "border-b border-border/60 last:border-0",
+                        canManage && "cursor-pointer hover:bg-muted/30",
+                      )}
+                      onClick={() => {
+                        if (canManage) setEditingEnvironment(environment);
+                      }}
+                      onKeyDown={(event) => {
+                        if (!canManage) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setEditingEnvironment(environment);
+                        }
+                      }}
+                      tabIndex={canManage ? 0 : undefined}
                     >
                       <td className={tdClass}>
                         <div className="flex items-center gap-3">
@@ -289,6 +412,21 @@ function EnvironmentsSettings() {
                       >
                         {formatCreated(environment.createdAt)}
                       </td>
+                      {canManage && (
+                        <td className={cn(tdClass, "w-0 whitespace-nowrap text-right")}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setEditingEnvironment(environment);
+                            }}
+                          >
+                            <PencilIcon />
+                            Edit
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -325,6 +463,34 @@ function EnvironmentsSettings() {
             }}
             onCancel={() => setSheetOpen(false)}
           />
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={editingEnvironment !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingEnvironment(null);
+        }}
+      >
+        <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+          <SheetHeader className="border-b">
+            <SheetTitle>Edit environment</SheetTitle>
+            <SheetDescription>
+              Rename this environment for everyone in the workspace.
+            </SheetDescription>
+          </SheetHeader>
+
+          {editingEnvironment && (
+            <EditEnvironmentForm
+              workspaceId={workspaceId}
+              environment={editingEnvironment}
+              onSuccess={async () => {
+                setEditingEnvironment(null);
+                await refresh();
+              }}
+              onCancel={() => setEditingEnvironment(null)}
+            />
+          )}
         </SheetContent>
       </Sheet>
     </div>

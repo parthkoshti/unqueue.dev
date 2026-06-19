@@ -339,9 +339,6 @@ function QueuePage() {
 
   const executeAction = async (action: QueueAction) => {
     switch (action) {
-      case "refresh":
-        refresh();
-        break;
       case "pause":
         await rpcClient.queueAdmin.pause({ redisInstanceId, queueName });
         break;
@@ -499,7 +496,13 @@ function QueuePage() {
         redisNickname={redisNickname}
         isFetching={isFetching}
         canWrite={canWrite}
-        onAction={setPendingAction}
+        onAction={(action) => {
+          if (action === "refresh") {
+            refresh();
+            return;
+          }
+          setPendingAction(action);
+        }}
       />
       <QueueActionDialog
         open={pendingAction !== null}

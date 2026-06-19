@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type QueueAction = "refresh" | "pause" | "resume" | "drain" | "clean" | "obliterate";
+type QueueAction = "pause" | "resume" | "drain" | "clean" | "obliterate";
 
 const ACTION_CONFIG: Record<
   QueueAction,
@@ -23,13 +23,6 @@ const ACTION_CONFIG: Record<
     requiresInput: boolean;
   }
 > = {
-  refresh: {
-    title: "Refresh queue data",
-    description: (q) => `Reload all data for "${q}" from Redis.`,
-    confirmLabel: "Refresh",
-    destructive: false,
-    requiresInput: false,
-  },
   pause: {
     title: "Pause queue",
     description: (q) => `Pause "${q}". No new jobs will be processed until resumed.`,

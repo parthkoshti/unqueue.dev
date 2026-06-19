@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   createId,
   DEFAULT_ENVIRONMENT_NAMES,
@@ -6,6 +6,7 @@ import {
 import { environments } from "@unqueue/db/schema";
 import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
+import { notFound } from "../errors.js";
 
 const ENVIRONMENT_SORT_ORDER = new Map(
   DEFAULT_ENVIRONMENT_NAMES.map((name, index) => [name, index]),
@@ -76,6 +77,27 @@ export function createEnvironmentService(deps: ServiceDeps, logger: Logger) {
       });
 
       return { id };
+    },
+
+    async rename(input: { workspaceId: string; id: string; name: string }) {
+      logger.info(
+        { workspaceId: input.workspaceId, environmentId: input.id, name: input.name },
+        "Renaming environment",
+      );
+
+      const [updated] = await deps.db
+        .update(environments)
+        .set({ name: input.name })
+        .where(
+          and(
+            eq(environments.id, input.id),
+            eq(environments.workspaceId, input.workspaceId),
+          ),
+        )
+        .returning();
+
+      if (!updated) notFound("Environment");
+      return updated;
     },
   };
 }
