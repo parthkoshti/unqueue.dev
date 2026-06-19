@@ -74,6 +74,16 @@ const searchSchema = z.object({
   jobId: z.string().optional(),
 });
 
+function hasJobDetailFields(job: unknown): boolean {
+  return (
+    typeof job === "object" &&
+    job !== null &&
+    "payload" in job &&
+    "progress" in job &&
+    Array.isArray((job as { logs?: unknown }).logs)
+  );
+}
+
 export const Route = createFileRoute(
   "/$workspaceId/$environmentId/queues/$queueName",
 )({
@@ -452,7 +462,7 @@ function QueuePage() {
 
   const openJobSheet = (id: string) => {
     const job = jobs.find((candidate) => candidate.id === id);
-    if (job) {
+    if (hasJobDetailFields(job)) {
       queryClient.setQueryData(["job", redisInstanceId, queueName, id], job);
     }
 

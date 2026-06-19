@@ -161,6 +161,7 @@ export function JobDetailPanel({
   const started = formatJobTimestamp(job?.processedOn);
   const finished = formatJobTimestamp(job?.finishedOn);
   const maxAttempts = job?.opts?.attempts;
+  const logs = job?.logs ?? [];
 
   return (
     <>
@@ -437,15 +438,15 @@ export function JobDetailPanel({
 
           <section>
             <h3 className="mb-2 font-medium text-muted-foreground">
-              Logs {(job?.logs.length ?? 0) > 0 && `(${job?.logs.length})`}
+              Logs {logs.length > 0 && `(${logs.length})`}
             </h3>
             {isLoadingHeavyFields ? (
               <CodeBlockSkeleton lines={5} />
-            ) : (job?.logs ?? []).length === 0 ? (
+            ) : logs.length === 0 ? (
               <p className="text-muted-foreground">No logs</p>
             ) : (
               <CodeBlock
-                code={(job?.logs ?? [])
+                code={logs
                   .map((log: ParsedLog) =>
                     log.format === "json" && log.entry
                       ? `[${log.entry.level}] ${log.entry.message}`
