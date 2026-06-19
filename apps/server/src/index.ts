@@ -85,7 +85,7 @@ app.use(
         env.NODE_ENV === "development" ? "http://localhost:3000" : undefined,
       ].filter(Boolean));
 
-      return allowedOrigins.has(origin) ? origin : env.PLATFORM_URL;
+      return allowedOrigins.has(origin) ? origin : null;
     },
     credentials: true,
   }),
