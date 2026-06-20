@@ -7,6 +7,7 @@ import {
 } from "@unqueue/bullmq";
 import type { Logger } from "@unqueue/logger";
 import type { ServiceDeps } from "../context.js";
+import { ServiceError } from "../errors.js";
 import { assertRedisInstanceAccess } from "../rbac.js";
 import type { Actor } from "../types.js";
 
@@ -55,7 +56,14 @@ export function createJobActionsService(deps: ServiceDeps, logger: Logger) {
         actor,
         input.redisInstanceId,
       );
-      await removeJob(connection, input.queueName, prefix, input.jobId);
+      try {
+        await removeJob(connection, input.queueName, prefix, input.jobId);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("locked by another worker")) {
+          throw new ServiceError("BAD_REQUEST", "Cannot remove an active job that is currently being processed");
+        }
+        throw error;
+      }
       return { ok: true as const };
     },
 

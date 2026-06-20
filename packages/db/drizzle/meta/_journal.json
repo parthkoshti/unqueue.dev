@@ -29,6 +29,13 @@
       "when": 1781763548022,
       "tag": "0003_fixed_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1750464000000,
+      "tag": "0004_queue_metric_snapshots",
+      "breakpoints": true
     }
   ]
 }

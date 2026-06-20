@@ -23,6 +23,7 @@ import { Route as WorkspaceIdEnvironmentIdIndexRouteImport } from './routes/$wor
 import { Route as WorkspaceIdSettingsMembersRouteImport } from './routes/$workspaceId/settings/members'
 import { Route as WorkspaceIdSettingsEnvironmentsRouteImport } from './routes/$workspaceId/settings/environments'
 import { Route as WorkspaceIdSettingsAlertsRouteImport } from './routes/$workspaceId/settings/alerts'
+import { Route as WorkspaceIdEnvironmentIdStatsRouteImport } from './routes/$workspaceId/$environmentId/stats'
 import { Route as WorkspaceIdEnvironmentIdQueuesQueueNameRouteImport } from './routes/$workspaceId/$environmentId/queues/$queueName'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -101,6 +102,12 @@ const WorkspaceIdSettingsAlertsRoute =
     path: '/settings/alerts',
     getParentRoute: () => WorkspaceIdRoute,
   } as any)
+const WorkspaceIdEnvironmentIdStatsRoute =
+  WorkspaceIdEnvironmentIdStatsRouteImport.update({
+    id: '/stats',
+    path: '/stats',
+    getParentRoute: () => WorkspaceIdEnvironmentIdRoute,
+  } as any)
 const WorkspaceIdEnvironmentIdQueuesQueueNameRoute =
   WorkspaceIdEnvironmentIdQueuesQueueNameRouteImport.update({
     id: '/queues/$queueName',
@@ -118,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
   '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/$workspaceId/$environmentId/stats': typeof WorkspaceIdEnvironmentIdStatsRoute
   '/$workspaceId/settings/alerts': typeof WorkspaceIdSettingsAlertsRoute
   '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
@@ -134,6 +142,7 @@ export interface FileRoutesByTo {
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
   '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/$workspaceId/$environmentId/stats': typeof WorkspaceIdEnvironmentIdStatsRoute
   '/$workspaceId/settings/alerts': typeof WorkspaceIdSettingsAlertsRoute
   '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
@@ -152,6 +161,7 @@ export interface FileRoutesById {
   '/$workspaceId/bookmarks': typeof WorkspaceIdBookmarksRoute
   '/$workspaceId/connections': typeof WorkspaceIdConnectionsRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/$workspaceId/$environmentId/stats': typeof WorkspaceIdEnvironmentIdStatsRoute
   '/$workspaceId/settings/alerts': typeof WorkspaceIdSettingsAlertsRoute
   '/$workspaceId/settings/environments': typeof WorkspaceIdSettingsEnvironmentsRoute
   '/$workspaceId/settings/members': typeof WorkspaceIdSettingsMembersRoute
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/$workspaceId/bookmarks'
     | '/$workspaceId/connections'
     | '/invite/$token'
+    | '/$workspaceId/$environmentId/stats'
     | '/$workspaceId/settings/alerts'
     | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/$workspaceId/bookmarks'
     | '/$workspaceId/connections'
     | '/invite/$token'
+    | '/$workspaceId/$environmentId/stats'
     | '/$workspaceId/settings/alerts'
     | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
@@ -204,6 +216,7 @@ export interface FileRouteTypes {
     | '/$workspaceId/bookmarks'
     | '/$workspaceId/connections'
     | '/invite/$token'
+    | '/$workspaceId/$environmentId/stats'
     | '/$workspaceId/settings/alerts'
     | '/$workspaceId/settings/environments'
     | '/$workspaceId/settings/members'
@@ -321,6 +334,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceIdSettingsAlertsRouteImport
       parentRoute: typeof WorkspaceIdRoute
     }
+    '/$workspaceId/$environmentId/stats': {
+      id: '/$workspaceId/$environmentId/stats'
+      path: '/stats'
+      fullPath: '/$workspaceId/$environmentId/stats'
+      preLoaderRoute: typeof WorkspaceIdEnvironmentIdStatsRouteImport
+      parentRoute: typeof WorkspaceIdEnvironmentIdRoute
+    }
     '/$workspaceId/$environmentId/queues/$queueName': {
       id: '/$workspaceId/$environmentId/queues/$queueName'
       path: '/queues/$queueName'
@@ -332,12 +352,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface WorkspaceIdEnvironmentIdRouteChildren {
+  WorkspaceIdEnvironmentIdStatsRoute: typeof WorkspaceIdEnvironmentIdStatsRoute
   WorkspaceIdEnvironmentIdIndexRoute: typeof WorkspaceIdEnvironmentIdIndexRoute
   WorkspaceIdEnvironmentIdQueuesQueueNameRoute: typeof WorkspaceIdEnvironmentIdQueuesQueueNameRoute
 }
 
 const WorkspaceIdEnvironmentIdRouteChildren: WorkspaceIdEnvironmentIdRouteChildren =
   {
+    WorkspaceIdEnvironmentIdStatsRoute: WorkspaceIdEnvironmentIdStatsRoute,
     WorkspaceIdEnvironmentIdIndexRoute: WorkspaceIdEnvironmentIdIndexRoute,
     WorkspaceIdEnvironmentIdQueuesQueueNameRoute:
       WorkspaceIdEnvironmentIdQueuesQueueNameRoute,

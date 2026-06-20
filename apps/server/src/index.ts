@@ -14,6 +14,7 @@ import { env } from "./env.js";
 import { RealtimeManager } from "./realtime/manager.js";
 import { attachSocketServer } from "./realtime/socket.js";
 import { AlertEngine } from "./alerts/engine.js";
+import { StatsFlusher } from "./stats-flusher.js";
 import { appRouter } from "@unqueue/orpc";
 import { createRpcHandlerPlugins } from "./rpc/logging.js";
 
@@ -61,6 +62,7 @@ const io = attachSocketServer(httpServer, auth, db, realtime, logger, env.PLATFO
 realtime.setSocketServer(io);
 
 const alertEngine = new AlertEngine(db, realtime.getMetrics(), logger, env.ENCRYPTION_KEYS);
+const statsFlusher = new StatsFlusher(db, realtime, logger);
 const services = createServices({
   db,
   logger,
@@ -263,5 +265,6 @@ httpServer.listen(Number(env.PORT), () => {
   void (async () => {
     await services.redis.bootstrapInstances();
     await alertEngine.start();
+    statsFlusher.start();
   })();
 });

@@ -616,6 +616,21 @@ const inviteRouter = {
     }),
 };
 
+const statsRouter = {
+  getQueueHistory: base
+    .input(
+      z.object({
+        redisInstanceId: z.string().length(24),
+        queueName: z.string().min(1),
+        hours: z.number().int().min(1).max(24 * 30).default(24),
+      }),
+    )
+    .use(authed)
+    .handler(async ({ context, input }) => {
+      return context.services.stats.getQueueHistory(toActor(context), input);
+    }),
+};
+
 export const appRouter = {
   workspace: workspaceRouter,
   members: membersRouter,
@@ -628,6 +643,7 @@ export const appRouter = {
   bookmark: bookmarkRouter,
   alert: alertRouter,
   invite: inviteRouter,
+  stats: statsRouter,
 };
 
 export type AppRouter = typeof appRouter;

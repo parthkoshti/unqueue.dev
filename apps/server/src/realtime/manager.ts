@@ -102,6 +102,16 @@ export class RealtimeManager {
     return this.instanceWorkspaces.get(redisInstanceId);
   }
 
+  getAllRegisteredQueues(): Array<{ redisInstanceId: string; queueName: string }> {
+    const result: Array<{ redisInstanceId: string; queueName: string }> = [];
+    for (const [redisInstanceId, state] of this.instances) {
+      for (const queueName of state.queues) {
+        result.push({ redisInstanceId, queueName });
+      }
+    }
+    return result;
+  }
+
   hasInstance(redisInstanceId: string): boolean {
     return this.instances.has(redisInstanceId);
   }

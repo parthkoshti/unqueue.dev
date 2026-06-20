@@ -625,6 +625,7 @@ function QueuePage() {
               jobId={sheetJobId}
               listJob={sheetListJob}
               canWrite={canWrite}
+              onRemoved={closeJobSheet}
             />
           )}
         </SheetContent>
