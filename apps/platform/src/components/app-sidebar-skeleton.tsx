@@ -24,7 +24,7 @@ import {
 } from "@/components/environment-overview-skeleton";
 
 const PLATFORM_NAV_ITEMS = 4;
-const QUEUE_NAV_ITEMS = 5;
+const QUEUE_NAV_ITEMS = 6;
 const WORKSPACE_NAV_ITEMS = 2;
 
 export function SwitcherSkeleton() {

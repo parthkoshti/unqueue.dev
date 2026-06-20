@@ -29,6 +29,34 @@
       "when": 1781763548022,
       "tag": "0003_fixed_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1750464000000,
+      "tag": "0004_queue_metric_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781974335341,
+      "tag": "0005_tiny_nightshade",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1750550400000,
+      "tag": "0006_queue_metrics_wait",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781983956873,
+      "tag": "0007_cute_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

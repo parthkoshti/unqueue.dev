@@ -1,5 +1,6 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
+  BarChart2Icon,
   BellIcon,
   BookmarkIcon,
   LayoutDashboardIcon,
@@ -38,6 +39,11 @@ export function NavMain({
     params: { workspaceId },
   });
 
+  const isStatsActive = !!matchRoute({
+    to: "/$workspaceId/$environmentId/stats",
+    params: { workspaceId, environmentId },
+  });
+
   const isAlertsActive = !!matchRoute({
     to: "/$workspaceId/settings/alerts",
     params: { workspaceId },
@@ -55,6 +61,17 @@ export function NavMain({
             >
               <LayoutDashboardIcon />
               <span>Overview</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild isActive={isStatsActive} tooltip="Stats">
+            <Link
+              to="/$workspaceId/$environmentId/stats"
+              params={{ workspaceId, environmentId }}
+            >
+              <BarChart2Icon />
+              <span>Stats</span>
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>

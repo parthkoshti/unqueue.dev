@@ -10,6 +10,7 @@ import {
   RotateCcwIcon,
   Trash2Icon,
 } from "lucide-react";
+import { QueueHistoryPanel } from "@/components/queue-history-panel";
 import { z } from "zod";
 import { rpcClient } from "@/lib/api";
 import { useStatusBar } from "@/components/shell-context";
@@ -515,12 +516,29 @@ function QueuePage() {
         onCancel={() => setPendingAction(null)}
       />
 
-      <QueueMetricsPanel
-        window={metricsWindow}
-        metrics={metricsQuery.data}
-        isLoading={metricsQuery.isLoading}
-        onWindowChange={setMetricsWindow}
-      />
+      <div className="shrink-0 border-b">
+        <QueueMetricsPanel
+          window={metricsWindow}
+          metrics={metricsQuery.data}
+          waitingJobs={
+            queueMetaQuery.data?.counts.waiting ??
+            cachedQueue?.counts.waiting ??
+            0
+          }
+          workers={
+            queueMetaQuery.data?.workers ??
+            cachedQueue?.workers ??
+            0
+          }
+          isLoading={metricsQuery.isLoading}
+          onWindowChange={setMetricsWindow}
+        />
+        <QueueHistoryPanel
+          redisInstanceId={redisInstanceId}
+          queueName={queueName}
+          window={metricsWindow}
+        />
+      </div>
 
       <QueueStateTabs
         state={state}
@@ -625,6 +643,7 @@ function QueuePage() {
               jobId={sheetJobId}
               listJob={sheetListJob}
               canWrite={canWrite}
+              onRemoved={closeJobSheet}
             />
           )}
         </SheetContent>

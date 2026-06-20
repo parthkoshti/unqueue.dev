@@ -102,6 +102,16 @@ export class RealtimeManager {
     return this.instanceWorkspaces.get(redisInstanceId);
   }
 
+  getAllRegisteredQueues(): Array<{ redisInstanceId: string; queueName: string }> {
+    const result: Array<{ redisInstanceId: string; queueName: string }> = [];
+    for (const [redisInstanceId, state] of this.instances) {
+      for (const queueName of state.queues) {
+        result.push({ redisInstanceId, queueName });
+      }
+    }
+    return result;
+  }
+
   hasInstance(redisInstanceId: string): boolean {
     return this.instances.has(redisInstanceId);
   }
@@ -505,7 +515,11 @@ export class RealtimeManager {
     });
 
     const handlers: Array<[string, (args: Record<string, unknown>) => void]> = [
-      ["added", (args) => this.onJobEvent(redisId, withQueue(args), "waiting")],
+      ["added", (args) => {
+        const withQ = withQueue(args);
+        this.metrics.recordAdded(redisId, String(withQ.queueName ?? ""));
+        this.onJobEvent(redisId, withQ, "waiting");
+      }],
       ["active", (args) => this.onJobEvent(redisId, withQueue(args), "active")],
       ["completed", (args) => this.onCompleted(redisId, withQueue(args))],
       ["failed", (args) => this.onFailed(redisId, withQueue(args))],
@@ -580,23 +594,30 @@ export class RealtimeManager {
 
   private onCompleted(redisId: string, args: Record<string, unknown>): void {
     const queueName = String(args.queueName ?? "");
-    const jobId = String(args.jobId ?? "");
 
     let runtimeMs = 0;
+    let waitMs = 0;
     if (
       typeof args.processedOn === "number" &&
       typeof args.finishedOn === "number"
     ) {
       runtimeMs = args.finishedOn - args.processedOn;
     }
+    if (
+      typeof args.processedOn === "number" &&
+      typeof args.timestamp === "number" &&
+      args.processedOn > args.timestamp
+    ) {
+      waitMs = args.processedOn - (args.timestamp as number);
+    }
 
-    this.metrics.recordCompletion(redisId, queueName, runtimeMs, true);
+    this.metrics.recordCompletion(redisId, queueName, runtimeMs, waitMs, true);
     this.onJobEvent(redisId, args, "completed");
   }
 
   private onFailed(redisId: string, args: Record<string, unknown>): void {
     const queueName = String(args.queueName ?? "");
-    this.metrics.recordCompletion(redisId, queueName, 0, false);
+    this.metrics.recordCompletion(redisId, queueName, 0, 0, false);
     this.onJobEvent(redisId, args, "failed");
   }
 

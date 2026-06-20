@@ -20,7 +20,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const MAX_VISIBLE_QUEUES = 15;
+const MAX_VISIBLE_QUEUES = 6;
 
 type QueueHealth = "failed" | "paused" | "backlog" | "active" | "idle";
 

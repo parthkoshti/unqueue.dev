@@ -27,9 +27,11 @@ export type QueueMetrics = {
   failureRate: number;
   completedInWindow: number;
   failedInWindow: number;
+  addedInWindow: number;
   totalInWindow: number;
   p95RuntimeMs: number;
   p99RuntimeMs: number;
+  p95WaitMs: number;
   queueLagMs: number;
   stalledCount: number;
 };
@@ -37,11 +39,13 @@ export type QueueMetrics = {
 type CompletionEvent = {
   timestamp: number;
   runtimeMs: number;
+  waitMs: number;
   success: boolean;
 };
 
 type MetricsState = {
   completions: CompletionEvent[];
+  added: number[];
   failed: number;
   completed: number;
   stalledCount: number;
@@ -62,6 +66,7 @@ export class MetricsAggregator {
     if (!state) {
       state = {
         completions: [],
+        added: [],
         failed: 0,
         completed: 0,
         stalledCount: 0,
@@ -91,15 +96,25 @@ export class MetricsAggregator {
     state.liveCounts = counts;
   }
 
+  recordAdded(redisId: string, queueName: string): void {
+    const state = this.getState(redisId, queueName);
+    state.added.push(Date.now());
+    if (state.added.length > MAX_COMPLETIONS_PER_QUEUE) {
+      const cutoff = Date.now() - WINDOWS["7d"];
+      state.added = state.added.filter((t) => t >= cutoff);
+    }
+  }
+
   recordCompletion(
     redisId: string,
     queueName: string,
     runtimeMs: number,
+    waitMs: number,
     success: boolean,
   ): void {
     const state = this.getState(redisId, queueName);
     const now = Date.now();
-    state.completions.push({ timestamp: now, runtimeMs, success });
+    state.completions.push({ timestamp: now, runtimeMs, waitMs, success });
     if (success) state.completed++;
     else state.failed++;
 
@@ -141,6 +156,11 @@ export class MetricsAggregator {
     const failedInWindow = inWindow.filter((c) => !c.success).length;
     const total = completedInWindow + failedInWindow;
     const runtimes = inWindow.map((c) => c.runtimeMs).sort((a, b) => a - b);
+    const waits = inWindow
+      .filter((c) => c.success && c.waitMs > 0)
+      .map((c) => c.waitMs)
+      .sort((a, b) => a - b);
+    const addedInWindow = state.added.filter((t) => t >= now - windowMs).length;
 
     const windowMinutes = windowMs / 60_000;
     const queueLagMs = state.oldestWaitingTimestamp
@@ -158,19 +178,20 @@ export class MetricsAggregator {
       failureRate: total > 0 ? failedInWindow / total : 0,
       completedInWindow,
       failedInWindow,
+      addedInWindow,
       totalInWindow: total,
       p95RuntimeMs: percentile(runtimes, 0.95),
       p99RuntimeMs: percentile(runtimes, 0.99),
+      p95WaitMs: percentile(waits, 0.95),
       queueLagMs,
       stalledCount: state.stalledCount,
     };
   }
 
   private prune(state: MetricsState, now: number): void {
-    const maxWindow = WINDOWS["7d"];
-    state.completions = state.completions.filter(
-      (c) => c.timestamp >= now - maxWindow,
-    );
+    const cutoff = now - WINDOWS["7d"];
+    state.completions = state.completions.filter((c) => c.timestamp >= cutoff);
+    state.added = state.added.filter((t) => t >= cutoff);
   }
 }
 

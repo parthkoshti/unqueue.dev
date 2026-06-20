@@ -1,6 +1,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookmarkIcon, CheckIcon, CopyIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { BookmarkFolderPicker } from "@/components/bookmark-folder-picker";
 import { rpcClient } from "@/lib/api";
 import type { JobDetail, JobSummary, ParsedLog } from "@unqueue/bullmq";
@@ -126,6 +136,7 @@ export function JobDetailPanel({
   jobId,
   listJob,
   canWrite = true,
+  onRemoved,
 }: {
   workspaceId: string;
   environmentId: string;
@@ -134,9 +145,11 @@ export function JobDetailPanel({
   jobId: string;
   listJob?: JobDetail | JobSummary;
   canWrite?: boolean;
+  onRemoved?: () => void;
 }) {
   const queryClient = useQueryClient();
   const [bookmarkPickerOpen, setBookmarkPickerOpen] = useState(false);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const jobInvalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const jobRoom = `job:${redisInstanceId}:${queueName}:${jobId}`;
@@ -265,14 +278,33 @@ export function JobDetailPanel({
               size="sm"
               variant="destructive"
               disabled={showSummarySkeleton || !job || !canWrite}
-              onClick={() =>
-                void runAction(() =>
-                  rpcClient.jobActions.remove({ redisInstanceId, queueName, jobId }),
-                )
-              }
+              onClick={() => setRemoveConfirmOpen(true)}
             >
               Remove
             </Button>
+            <AlertDialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove job?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Job <span className="font-mono">{jobId}</span> will be permanently removed from the queue. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() =>
+                      void runAction(() =>
+                        rpcClient.jobActions.remove({ redisInstanceId, queueName, jobId }),
+                      ).then(() => onRemoved?.())
+                    }
+                  >
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
         {showSummarySkeleton ? (

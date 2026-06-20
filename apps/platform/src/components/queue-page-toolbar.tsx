@@ -241,27 +241,37 @@ export function QueuePageHeader({
   );
 }
 
+function fmtMs(ms: number) {
+  if (ms === 0) return "—";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
 export function QueueMetricsPanel({
   window,
   metrics,
+  waitingJobs,
+  workers,
   isLoading,
   onWindowChange,
 }: {
   window: MetricsWindow;
   metrics: QueueMetrics | undefined;
+  waitingJobs: number;
+  workers: number;
   isLoading: boolean;
   onWindowChange: (window: MetricsWindow) => void;
 }) {
   const successRate = metrics?.successRate ?? 1;
-  const failureRate = metrics?.failureRate ?? 0;
   const completedInWindow = metrics?.completedInWindow ?? 0;
-  const failedInWindow = metrics?.failedInWindow ?? 0;
   const totalInWindow = metrics?.totalInWindow ?? 0;
   const throughput = metrics?.throughputPerMinute ?? 0;
+  const p95Wait = metrics?.p95WaitMs ?? 0;
+  const p95Runtime = metrics?.p95RuntimeMs ?? 0;
 
   return (
-    <div className="shrink-0 space-y-4 border-b py-4">
-      <div className="flex flex-wrap gap-1.5 px-4">
+    <div className="shrink-0">
+      <div className="flex flex-wrap gap-1.5 px-4 py-2.5">
         {METRICS_WINDOWS.map((item) => (
           <button
             key={item.key}
@@ -279,7 +289,7 @@ export function QueueMetricsPanel({
         ))}
       </div>
 
-      <div className="grid w-full grid-cols-2 gap-0 sm:grid-cols-4">
+      <div className="grid w-full grid-cols-2 gap-0 sm:grid-cols-5">
         <MetricCard
           label="Success Rate"
           value={isLoading ? undefined : formatRate(successRate)}
@@ -293,23 +303,25 @@ export function QueueMetricsPanel({
         <MetricCard
           label="Throughput"
           value={isLoading ? undefined : formatThroughput(throughput)}
-          sub={
-            isLoading
-              ? undefined
-              : `${completedInWindow.toLocaleString()} job${completedInWindow === 1 ? "" : "s"}`
-          }
+          sub={isLoading ? undefined : "jobs/min"}
           isLoading={isLoading}
         />
         <MetricCard
-          label="Completed"
-          value={isLoading ? undefined : completedInWindow.toLocaleString()}
-          sub={isLoading ? undefined : "in period"}
+          label="Wait P95"
+          value={isLoading ? undefined : fmtMs(p95Wait)}
+          sub={isLoading ? undefined : "queue wait"}
           isLoading={isLoading}
         />
         <MetricCard
-          label="Failed"
-          value={isLoading ? undefined : failedInWindow.toLocaleString()}
-          sub={isLoading ? undefined : `${formatRate(failureRate)} rate`}
+          label="Runtime P95"
+          value={isLoading ? undefined : fmtMs(p95Runtime)}
+          sub={isLoading ? undefined : "job runtime"}
+          isLoading={isLoading}
+        />
+        <MetricCard
+          label="Workers"
+          value={isLoading ? undefined : workers.toLocaleString()}
+          sub={isLoading ? undefined : "online"}
           isLoading={isLoading}
         />
       </div>
@@ -337,9 +349,9 @@ function MetricCard({
     >
       <p className="text-[11px] text-muted-foreground">{label}</p>
       {isLoading ? (
-        <Skeleton className="h-8 w-20" />
+        <Skeleton className="h-5 w-20" />
       ) : (
-        <p className="font-mono text-2xl font-semibold tracking-tight tabular-nums">
+        <p className="font-mono text-base font-semibold tracking-tight tabular-nums">
           {value}
         </p>
       )}

@@ -1,9 +1,11 @@
 import {
   boolean,
+  index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
+  real,
   serial,
   text,
   timestamp,
@@ -196,3 +198,35 @@ export const alertEvents = pgTable("alert_events", {
   firedAt: timestamp("fired_at").notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at"),
 });
+
+export const queueMetricSnapshots = pgTable(
+  "queue_metric_snapshots",
+  {
+    id: serial("id").primaryKey(),
+    redisInstanceId: varchar("redis_instance_id", { length: 24 })
+      .notNull()
+      .references(() => redisInstances.id, { onDelete: "cascade" }),
+    queueName: text("queue_name").notNull(),
+    snapshotAt: timestamp("snapshot_at").notNull(),
+    waiting: integer("waiting").notNull().default(0),
+    active: integer("active").notNull().default(0),
+    delayed: integer("delayed").notNull().default(0),
+    completed: integer("completed").notNull().default(0),
+    failed: integer("failed").notNull().default(0),
+    throughputPerMinute: real("throughput_per_minute").notNull().default(0),
+    failureRate: real("failure_rate").notNull().default(0),
+    p95RuntimeMs: integer("p95_runtime_ms").notNull().default(0),
+    completedInWindow: integer("completed_in_window").notNull().default(0),
+    failedInWindow: integer("failed_in_window").notNull().default(0),
+    stalledCount: integer("stalled_count").notNull().default(0),
+    p95WaitMs: integer("p95_wait_ms").notNull().default(0),
+    addedInWindow: integer("added_in_window").notNull().default(0),
+  },
+  (table) => [
+    index("queue_metric_snapshots_lookup_idx").on(
+      table.redisInstanceId,
+      table.queueName,
+      table.snapshotAt,
+    ),
+  ],
+);

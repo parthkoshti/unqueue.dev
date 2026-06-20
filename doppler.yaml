@@ -1,4 +1,0 @@
-# Run `doppler setup` from the repo root to link this directory to your Doppler project.
-setup:
-  - project: apps
-    config: dev

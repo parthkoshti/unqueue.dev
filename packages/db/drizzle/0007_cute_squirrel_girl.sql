@@ -1,0 +1,2 @@
+ALTER TABLE "queue_metric_snapshots" ADD COLUMN "p95_wait_ms" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "queue_metric_snapshots" ADD COLUMN "added_in_window" integer DEFAULT 0 NOT NULL;

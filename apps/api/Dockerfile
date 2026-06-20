@@ -1,4 +1,4 @@
-# Build from the monorepo root (Dokploy: context = repo root, Dockerfile = apps/server/Dockerfile).
+# Build from the monorepo root (Dokploy: context = repo root, Dockerfile = apps/api/Dockerfile).
 # Runtime secrets come from compose / Dokploy env — not baked into the image.
 
 # syntax=docker/dockerfile:1
@@ -13,7 +13,7 @@ WORKDIR /app
 FROM base AS pruner
 COPY . .
 RUN npm install -g turbo@2.9.15
-RUN turbo prune @unqueue/server --docker --out-dir=out
+RUN turbo prune @unqueue/api --docker --out-dir=out
 
 FROM base AS builder
 COPY --from=pruner /app/out/json/ .
@@ -23,8 +23,8 @@ RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
 
 ENV NODE_ENV=production
-RUN pnpm exec turbo run build --filter=@unqueue/server \
-  && pnpm --filter @unqueue/server deploy --prod /deploy
+RUN pnpm exec turbo run build --filter=@unqueue/api \
+  && pnpm --filter @unqueue/api deploy --prod /deploy
 
 FROM node:24-bookworm-slim AS runner
 RUN apt-get update \
