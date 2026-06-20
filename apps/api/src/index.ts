@@ -15,6 +15,7 @@ import { RealtimeManager } from "./realtime/manager.js";
 import { attachSocketServer } from "./realtime/socket.js";
 import { AlertEngine } from "./alerts/engine.js";
 import { StatsFlusher } from "./stats-flusher.js";
+import { startDemoWorker } from "./demo-worker.js";
 import { appRouter } from "@unqueue/orpc";
 import { createRpcHandlerPlugins } from "./rpc/logging.js";
 
@@ -266,5 +267,8 @@ httpServer.listen(Number(env.PORT), () => {
     await services.redis.bootstrapInstances();
     await alertEngine.start();
     statsFlusher.start();
+    if (env.REDIS_URL) {
+      startDemoWorker(env.REDIS_URL, logger);
+    }
   })();
 });

@@ -1,8 +1,8 @@
 services:
-  server:
+  api:
     build:
       context: .
-      dockerfile: apps/server/Dockerfile
+      dockerfile: apps/api/Dockerfile
     ports:
       - "${PORT:-3001}:${PORT:-3001}"
     environment:
@@ -19,6 +19,7 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@unqueue.dev}
+      DISCORD_NOTIFICATION_URL: ${DISCORD_NOTIFICATION_URL:-}
       PORT: ${PORT:-3001}
       NODE_ENV: ${NODE_ENV:-production}
     healthcheck:
@@ -47,7 +48,7 @@ services:
     ports:
       - "${PLATFORM_PORT:-5174}:80"
     depends_on:
-      server:
+      api:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]

@@ -1,5 +1,5 @@
 {
-  "name": "@unqueue/server",
+  "name": "@unqueue/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -24,6 +24,7 @@
     "@unqueue/validators": "workspace:*",
     "better-auth": "^1.6.11",
     "bullmq": "^5.77.6",
+    "ioredis": "^5.11.1",
     "drizzle-orm": "^0.44.7",
     "hono": "^4.12.23",
     "socket.io": "^4.8.3",
