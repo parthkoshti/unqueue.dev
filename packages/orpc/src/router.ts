@@ -6,7 +6,12 @@ import {
   redisInstanceInputSchema,
 } from "@unqueue/validators";
 import type { Actor } from "@unqueue/services";
-import { authed, requireRole, rpcLogging, serviceErrors } from "./middleware.js";
+import {
+  authed,
+  requireRole,
+  rpcLogging,
+  serviceErrors,
+} from "./middleware.js";
 import type { ServerContext } from "./context.js";
 
 const base = os.$context<ServerContext>().use(rpcLogging).use(serviceErrors);
@@ -29,15 +34,27 @@ const workspaceRouter = {
     .input(z.object({ workspaceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.services.workspace.get(toActor(context), input.workspaceId);
+      return context.services.workspace.get(
+        toActor(context),
+        input.workspaceId,
+      );
     }),
 
   rename: base
-    .input(z.object({ workspaceId: z.string().length(24), name: z.string().min(1).max(64) }))
+    .input(
+      z.object({
+        workspaceId: z.string().length(24),
+        name: z.string().min(1).max(64),
+      }),
+    )
     .use(authed)
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      return context.services.workspace.rename(toActor(context), input.workspaceId, input.name);
+      return context.services.workspace.rename(
+        toActor(context),
+        input.workspaceId,
+        input.name,
+      );
     }),
 };
 
@@ -62,7 +79,9 @@ const membersRouter = {
       z.object({
         workspaceId: z.string().length(24),
         email: z.string().email(),
-        role: z.enum(ROLES).refine((r) => r !== "owner", "Cannot invite as owner"),
+        role: z
+          .enum(ROLES)
+          .refine((r) => r !== "owner", "Cannot invite as owner"),
       }),
     )
     .use(authed)
@@ -78,7 +97,9 @@ const membersRouter = {
     .input(
       z.object({
         memberId: z.string().length(24),
-        role: z.enum(ROLES).refine((r) => r !== "owner", "Cannot assign owner role"),
+        role: z
+          .enum(ROLES)
+          .refine((r) => r !== "owner", "Cannot assign owner role"),
       }),
     )
     .use(authed)
@@ -103,7 +124,9 @@ const membersRouter = {
     .input(
       z.object({
         inviteId: z.string().length(24),
-        role: z.enum(ROLES).refine((r) => r !== "owner", "Cannot assign owner role"),
+        role: z
+          .enum(ROLES)
+          .refine((r) => r !== "owner", "Cannot assign owner role"),
       }),
     )
     .use(authed)
@@ -121,7 +144,10 @@ const membersRouter = {
     .use(authed)
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
-      return context.services.members.revokeInvite(toActor(context), input.inviteId);
+      return context.services.members.revokeInvite(
+        toActor(context),
+        input.inviteId,
+      );
     }),
 };
 
@@ -134,7 +160,12 @@ const environmentRouter = {
     }),
 
   create: base
-    .input(z.object({ workspaceId: z.string().length(24), name: z.string().trim().min(1).max(100) }))
+    .input(
+      z.object({
+        workspaceId: z.string().length(24),
+        name: z.string().trim().min(1).max(100),
+      }),
+    )
     .use(authed)
     .use(requireRole("admin"))
     .handler(async ({ context, input }) => {
@@ -211,7 +242,10 @@ const redisRouter = {
     .input(z.object({ environmentId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.services.redis.getClientCounts(toActor(context), input.environmentId);
+      return context.services.redis.getClientCounts(
+        toActor(context),
+        input.environmentId,
+      );
     }),
 
   getClients: base
@@ -229,7 +263,10 @@ const queueRouter = {
     .input(z.object({ redisInstanceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.services.queue.list(toActor(context), input.redisInstanceId);
+      return context.services.queue.list(
+        toActor(context),
+        input.redisInstanceId,
+      );
     }),
 
   listForEnvironment: base
@@ -344,7 +381,6 @@ const jobRouter = {
     .handler(async ({ context, input }) => {
       return context.services.job.get(toActor(context), input);
     }),
-
 };
 
 const jobActionInput = z.object({
@@ -449,7 +485,10 @@ const bookmarkRouter = {
     .input(z.object({ workspaceId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.services.bookmark.listFolders(toActor(context), input.workspaceId);
+      return context.services.bookmark.listFolders(
+        toActor(context),
+        input.workspaceId,
+      );
     }),
 
   createFolder: base
@@ -524,7 +563,10 @@ const bookmarkRouter = {
     .input(z.object({ id: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.services.bookmark.deleteBookmark(toActor(context), input.id);
+      return context.services.bookmark.deleteBookmark(
+        toActor(context),
+        input.id,
+      );
     }),
 
   createNote: base
@@ -564,10 +606,7 @@ const alertRouter = {
     .input(z.object({ environmentId: z.string().length(24) }))
     .use(authed)
     .handler(async ({ context, input }) => {
-      return context.services.alert.list(
-        toActor(context),
-        input.environmentId,
-      );
+      return context.services.alert.list(toActor(context), input.environmentId);
     }),
 
   create: base
@@ -622,7 +661,11 @@ const statsRouter = {
       z.object({
         redisInstanceId: z.string().length(24),
         queueName: z.string().min(1),
-        hours: z.number().int().min(1).max(24 * 30).default(24),
+        hours: z
+          .number()
+          .min(1 / 60)
+          .max(24 * 30)
+          .default(24),
       }),
     )
     .use(authed)

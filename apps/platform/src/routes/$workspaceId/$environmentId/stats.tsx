@@ -1,7 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useCallback } from "react";
-import { BarChart2Icon } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import {
+  ActivityIcon,
+  BarChart2Icon,
+  ChevronDownIcon,
+  ClockIcon,
+  InboxIcon,
+  TrendingDownIcon,
+  ZapIcon,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { rpcClient } from "@/lib/api";
 import {
   environmentQueuesQueryOptions,
@@ -9,234 +18,60 @@ import {
 } from "@/lib/environment-queues-query";
 import { useEnvironmentQueueSync } from "@/hooks/use-environment-queue-sync";
 import type { EnvironmentQueueRow } from "@/components/environment-queues-table";
+import type { QueueMetrics } from "@unqueue/bullmq";
 import { QueueStatusChip, type QueueStatus } from "@/components/queue-status-chip";
+import { RedisIcon } from "@/components/icons/redis";
 import { ScrollArea } from "@unqueue/ui/components/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { RoutePending } from "@/lib/route-pending";
+import { onSocketEvent } from "@/lib/socket";
 
 export const Route = createFileRoute("/$workspaceId/$environmentId/stats")({
   pendingComponent: RoutePending,
   component: StatsPage,
 });
 
+// ─── formatting ──────────────────────────────────────────────────────────────
 
 function fmt(n: number) {
   return n.toLocaleString();
 }
 
 function fmtRate(r: number) {
-  return `${(r * 100).toFixed(1)}%`;
+  const pct = r * 100;
+  return `${pct < 0.1 && pct > 0 ? "<0.1" : pct.toFixed(1)}%`;
 }
 
 function fmtMs(ms: number) {
   if (ms === 0) return "—";
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
 }
 
 function fmtThroughput(n: number) {
-  if (n < 0.1) return "< 0.1/min";
+  if (n === 0) return "0/min";
+  if (n < 0.1) return "<0.1/min";
   return `${n.toFixed(1)}/min`;
 }
 
-// Minimal SVG sparkline
-function Sparkline({
-  data,
-  color = "hsl(var(--primary))",
-  height = 40,
-  width = 160,
-}: {
-  data: number[];
-  color?: string;
-  height?: number;
-  width?: number;
-}) {
-  if (data.length < 2) {
-    return (
-      <svg width={width} height={height}>
-        <line
-          x1={0}
-          y1={height / 2}
-          x2={width}
-          y2={height / 2}
-          stroke="hsl(var(--muted-foreground))"
-          strokeWidth={1}
-          strokeDasharray="4 4"
-        />
-      </svg>
-    );
-  }
+// ─── live metrics hook ────────────────────────────────────────────────────────
 
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const pad = 2;
-
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - pad - ((v - min) / range) * (height - pad * 2);
-    return `${x},${y}`;
-  });
-
-  const areaPoints = [
-    `0,${height}`,
-    ...points,
-    `${width},${height}`,
-  ].join(" ");
-
-  return (
-    <svg width={width} height={height} style={{ overflow: "visible" }}>
-      <polygon
-        points={areaPoints}
-        fill={color}
-        fillOpacity={0.1}
-        stroke="none"
-      />
-      <polyline
-        points={points.join(" ")}
-        fill="none"
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+function parseQueueRoom(
+  room: string,
+): { redisInstanceId: string; queueName: string } | null {
+  if (!room.startsWith("queue:")) return null;
+  const rest = room.slice("queue:".length);
+  const sep = rest.indexOf(":");
+  if (sep === -1) return null;
+  return {
+    redisInstanceId: rest.slice(0, sep),
+    queueName: rest.slice(sep + 1),
+  };
 }
 
-function HistoryChart<T>({
-  data,
-  label,
-  getValue,
-  color,
-}: {
-  data: T[];
-  label: string;
-  getValue: (row: T) => number;
-  color?: string;
-}) {
-  const values = data.map(getValue);
-  const latest = values.at(-1) ?? 0;
-  const peak = Math.max(...values);
-
-  return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-3 flex items-start justify-between">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      </div>
-      <Sparkline data={values} color={color} width={200} height={48} />
-      <div className="mt-2 flex items-baseline gap-3">
-        <span className="text-lg font-semibold tabular-nums">
-          {typeof latest === "number" && latest < 1
-            ? fmtRate(latest)
-            : latest.toFixed(1)}
-        </span>
-        <span className="text-[10px] text-muted-foreground">
-          peak {typeof peak === "number" && peak < 1 ? fmtRate(peak) : peak.toFixed(1)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function QueueHistoryPanel({
-  queue,
-}: {
-  queue: EnvironmentQueueRow & { redisInstanceId: string };
-}) {
-  const historyQuery = useQuery({
-    queryKey: ["queue-history", queue.redisInstanceId, queue.name],
-    queryFn: () =>
-      rpcClient.stats.getQueueHistory({
-        redisInstanceId: queue.redisInstanceId,
-        queueName: queue.name,
-        hours: 24,
-      }),
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-  });
-
-  const data = historyQuery.data ?? [];
-
-  if (historyQuery.isLoading) {
-    return (
-      <div className="grid grid-cols-2 gap-3 p-4 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-lg" />
-        ))}
-      </div>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="flex h-28 items-center justify-center text-xs text-muted-foreground">
-        No historical data yet — snapshots are collected every minute.
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 gap-3 p-4 lg:grid-cols-4">
-      <HistoryChart
-        data={data}
-        label="Throughput (jobs/min)"
-        getValue={(r) => r.throughputPerMinute}
-        color="hsl(var(--primary))"
-      />
-      <HistoryChart
-        data={data}
-        label="Failure rate"
-        getValue={(r) => r.failureRate}
-        color="hsl(var(--destructive))"
-      />
-      <HistoryChart
-        data={data}
-        label="Waiting"
-        getValue={(r) => r.waiting}
-        color="hsl(220 60% 55%)"
-      />
-      <HistoryChart
-        data={data}
-        label="P95 runtime"
-        getValue={(r) => r.p95RuntimeMs}
-        color="hsl(38 80% 50%)"
-      />
-    </div>
-  );
-}
-
-const thClass =
-  "px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground";
-const tdClass = "px-3 py-2 align-middle";
-
-function StatsPage() {
-  const { workspaceId, environmentId } = Route.useParams();
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-
-  const redisQuery = useQuery(environmentRedisQueryOptions(environmentId));
-  const queuesQuery = useQuery(environmentQueuesQueryOptions(environmentId));
-
-  const queues = queuesQuery.data ?? [];
-  const redisInstances = redisQuery.data ?? [];
-  const redisInstanceIds = redisInstances.map((i) => i.id);
-
-  useEnvironmentQueueSync(environmentId, queues, redisInstanceIds);
-
-  const getMetricsQuery = useCallback(
-    (queue: EnvironmentQueueRow) =>
-      rpcClient.queue.getMetrics({
-        redisInstanceId: queue.redisInstanceId,
-        queueName: queue.name,
-        window: "5m",
-      }),
-    [],
-  );
-
-  const [liveMetrics, setLiveMetrics] = useState<
-    Record<string, Awaited<ReturnType<typeof rpcClient.queue.getMetrics>>>
-  >({});
+function useQueueMetricsLive(queues: EnvironmentQueueRow[]) {
+  const [metrics, setMetrics] = useState<Record<string, QueueMetrics>>({});
 
   useEffect(() => {
     if (queues.length === 0) return;
@@ -246,9 +81,13 @@ function StatsPage() {
       queues.map(async (q) => {
         try {
           const key = `${q.redisInstanceId}:${q.name}`;
-          const m = await getMetricsQuery(q);
+          const m = await rpcClient.queue.getMetrics({
+            redisInstanceId: q.redisInstanceId,
+            queueName: q.name,
+            window: "5m",
+          });
           if (!cancelled) {
-            setLiveMetrics((prev) => ({ ...prev, [key]: m }));
+            setMetrics((prev) => ({ ...prev, [key]: m }));
           }
         } catch {}
       }),
@@ -257,24 +96,412 @@ function StatsPage() {
     return () => {
       cancelled = true;
     };
-  }, [queues, getMetricsQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queues.map((q) => `${q.redisInstanceId}:${q.name}`).join(",")]);
 
-  const selectedQueue = queues.find(
-    (q) => `${q.redisInstanceId}:${q.name}` === selectedKey,
+  useEffect(() => {
+    return onSocketEvent((data) => {
+      if (data.type !== "metrics:update") return;
+      const parsed = parseQueueRoom(data.room);
+      if (!parsed) return;
+      const key = `${parsed.redisInstanceId}:${parsed.queueName}`;
+      const payload = data.payload as { metrics?: QueueMetrics };
+      if (!payload?.metrics) return;
+      setMetrics((prev) => ({ ...prev, [key]: payload.metrics! }));
+    });
+  }, []);
+
+  return metrics;
+}
+
+// ─── summary cards ────────────────────────────────────────────────────────────
+
+function SummaryCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  tone = "default",
+  loading,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: LucideIcon;
+  tone?: "default" | "blue" | "amber" | "destructive" | "emerald";
+  loading?: boolean;
+}) {
+  const valueClass = {
+    default: "",
+    blue: "text-blue-600 dark:text-blue-400",
+    amber: "text-amber-600 dark:text-amber-400",
+    destructive: "text-destructive",
+    emerald: "text-emerald-600 dark:text-emerald-400",
+  }[tone];
+
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-4">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted/60">
+        <Icon className="size-4 text-muted-foreground" />
+      </div>
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        {loading ? (
+          <Skeleton className="h-6 w-16" />
+        ) : (
+          <p
+            className={cn(
+              "text-xl font-semibold tabular-nums tracking-tight",
+              valueClass,
+            )}
+          >
+            {value}
+          </p>
+        )}
+        {sub && !loading && (
+          <p className="text-[10px] text-muted-foreground">{sub}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── table helpers ────────────────────────────────────────────────────────────
+
+const thCls =
+  "px-3 py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground";
+const tdCls = "px-3 py-2.5 align-middle";
+
+function NumCell({
+  value,
+  tone,
+}: {
+  value: string;
+  tone?: "blue" | "amber" | "destructive" | "muted";
+}) {
+  return (
+    <td
+      className={cn(
+        tdCls,
+        "text-right font-mono text-[11px] tabular-nums",
+        tone === "blue" && "text-blue-600 dark:text-blue-400",
+        tone === "amber" && "text-amber-600 dark:text-amber-400",
+        tone === "destructive" && "font-medium text-destructive",
+        tone === "muted" && "text-muted-foreground",
+        !tone && "text-foreground",
+      )}
+    >
+      {value}
+    </td>
+  );
+}
+
+// ─── per-instance section ─────────────────────────────────────────────────────
+
+type RedisInstance = Awaited<ReturnType<typeof rpcClient.redis.list>>[number];
+
+function instanceAgg(
+  queues: EnvironmentQueueRow[],
+  liveMetrics: Record<string, QueueMetrics>,
+) {
+  let active = 0,
+    waiting = 0,
+    delayed = 0,
+    failed = 0,
+    throughput = 0,
+    completedInWindow = 0,
+    processedInWindow = 0;
+
+  for (const q of queues) {
+    active += q.counts.active;
+    waiting += q.counts.waiting;
+    delayed += q.counts.delayed;
+    failed += q.counts.failed;
+    const m = liveMetrics[`${q.redisInstanceId}:${q.name}`];
+    if (m) {
+      throughput += m.throughputPerMinute;
+      completedInWindow += m.completedInWindow;
+      processedInWindow += m.totalInWindow;
+    }
+  }
+
+  const failureRate =
+    processedInWindow > 0
+      ? (processedInWindow - completedInWindow) / processedInWindow
+      : null;
+
+  return {
+    active,
+    backlog: waiting + delayed,
+    failed,
+    throughput,
+    failureRate,
+  };
+}
+
+function InstanceSection({
+  redis,
+  queues,
+  liveMetrics,
+  workspaceId,
+  environmentId,
+}: {
+  redis: RedisInstance;
+  queues: EnvironmentQueueRow[];
+  liveMetrics: Record<string, QueueMetrics>;
+  workspaceId: string;
+  environmentId: string;
+}) {
+  const [expanded, setExpanded] = useState(true);
+
+  const agg = useMemo(
+    () => instanceAgg(queues, liveMetrics),
+    [queues, liveMetrics],
   );
 
+  const metricsReady = queues.some(
+    (q) => liveMetrics[`${q.redisInstanceId}:${q.name}`] !== undefined,
+  );
+
+  const isConnected = redis.status === "connected";
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-border">
+      <button
+        type="button"
+        onClick={() => setExpanded((p) => !p)}
+        className="flex w-full items-center gap-3 border-b border-border bg-muted/40 px-4 py-3 text-left transition-colors hover:bg-muted/60"
+      >
+        <span
+          className={cn(
+            "size-2 shrink-0 rounded-full",
+            isConnected ? "bg-emerald-500" : "bg-muted-foreground/40",
+          )}
+        />
+        <RedisIcon className="size-3.5 shrink-0 text-red-500" />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate text-sm font-medium">
+            {redis.nickname || "Unnamed instance"}
+          </span>
+          <span className="shrink-0 rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+            {queues.length} queue{queues.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-4 font-mono text-[11px] tabular-nums">
+          {agg.active > 0 && (
+            <span className="text-blue-600 dark:text-blue-400">
+              {fmt(agg.active)} active
+            </span>
+          )}
+          {agg.backlog > 0 && (
+            <span className="text-amber-600 dark:text-amber-400">
+              {fmt(agg.backlog)} backlog
+            </span>
+          )}
+          {agg.failed > 0 && (
+            <span className="text-destructive">{fmt(agg.failed)} failed</span>
+          )}
+          <span className="text-muted-foreground">
+            {metricsReady ? fmtThroughput(agg.throughput) : "—"}
+          </span>
+        </div>
+
+        <ChevronDownIcon
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground transition-transform",
+            expanded && "rotate-180",
+          )}
+        />
+      </button>
+
+      {expanded && queues.length === 0 && (
+        <div className="flex h-16 items-center justify-center text-xs text-muted-foreground">
+          No queues discovered yet.
+        </div>
+      )}
+
+      {expanded && queues.length > 0 && (
+        <table className="w-full text-xs">
+          <thead className="bg-muted/20">
+            <tr className="border-b border-border text-left">
+              <th className={cn(thCls, "pl-4")}>Queue</th>
+              <th className={cn(thCls, "text-right")}>Waiting</th>
+              <th className={cn(thCls, "text-right")}>Active</th>
+              <th className={cn(thCls, "text-right")}>Delayed</th>
+              <th className={cn(thCls, "text-right")}>Failed</th>
+              <th className={cn(thCls, "text-right")}>Throughput</th>
+              <th className={cn(thCls, "text-right")}>Fail rate</th>
+              <th className={cn(thCls, "text-right")}>P95</th>
+              <th className={cn(thCls, "pr-4")}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {queues.map((queue) => {
+              const key = `${queue.redisInstanceId}:${queue.name}`;
+              const m = liveMetrics[key];
+              return (
+                <tr
+                  key={key}
+                  className="border-b border-border/60 text-xs last:border-0 hover:bg-muted/20"
+                >
+                  <td className={cn(tdCls, "pl-4")}>
+                    <Link
+                      to="/$workspaceId/$environmentId/queues/$queueName"
+                      params={{ workspaceId, environmentId, queueName: queue.name }}
+                      search={{ redisInstanceId: queue.redisInstanceId }}
+                      className="block max-w-[14rem] truncate font-mono font-medium hover:underline"
+                    >
+                      {queue.name}
+                    </Link>
+                  </td>
+                  <NumCell
+                    value={fmt(queue.counts.waiting)}
+                    tone={queue.counts.waiting > 0 ? undefined : "muted"}
+                  />
+                  <NumCell
+                    value={fmt(queue.counts.active)}
+                    tone={queue.counts.active > 0 ? "blue" : "muted"}
+                  />
+                  <NumCell
+                    value={fmt(queue.counts.delayed)}
+                    tone={queue.counts.delayed > 0 ? "amber" : "muted"}
+                  />
+                  <NumCell
+                    value={fmt(queue.counts.failed)}
+                    tone={queue.counts.failed > 0 ? "destructive" : "muted"}
+                  />
+                  <td
+                    className={cn(
+                      tdCls,
+                      "text-right font-mono text-[11px] tabular-nums text-muted-foreground",
+                    )}
+                  >
+                    {m ? fmtThroughput(m.throughputPerMinute) : "—"}
+                  </td>
+                  <td
+                    className={cn(
+                      tdCls,
+                      "text-right font-mono text-[11px] tabular-nums",
+                      m && m.failureRate >= 0.05
+                        ? "text-destructive"
+                        : m && m.failureRate > 0
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-muted-foreground",
+                    )}
+                  >
+                    {m ? fmtRate(m.failureRate) : "—"}
+                  </td>
+                  <td
+                    className={cn(
+                      tdCls,
+                      "text-right font-mono text-[11px] tabular-nums text-muted-foreground",
+                    )}
+                  >
+                    {m ? fmtMs(m.p95RuntimeMs) : "—"}
+                  </td>
+                  <td className={cn(tdCls, "pr-4")}>
+                    <QueueStatusChip
+                      status={
+                        (queue.isPaused ? "paused" : "running") as QueueStatus
+                      }
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+// ─── page ─────────────────────────────────────────────────────────────────────
+
+function StatsPage() {
+  const { workspaceId, environmentId } = Route.useParams();
+
+  const redisQuery = useQuery(environmentRedisQueryOptions(environmentId));
+  const queuesQuery = useQuery(environmentQueuesQueryOptions(environmentId));
+
+  const queues = useMemo(() => queuesQuery.data ?? [], [queuesQuery.data]);
+  const redisInstances = useMemo(
+    () => redisQuery.data ?? [],
+    [redisQuery.data],
+  );
+  const redisInstanceIds = useMemo(
+    () => redisInstances.map((i) => i.id),
+    [redisInstances],
+  );
+
+  useEnvironmentQueueSync(environmentId, queues, redisInstanceIds);
+  const liveMetrics = useQueueMetricsLive(queues);
+
+  const queuesByInstance = useMemo(() => {
+    const map = new Map<string, EnvironmentQueueRow[]>();
+    for (const q of queues) {
+      const arr = map.get(q.redisInstanceId) ?? [];
+      arr.push(q);
+      map.set(q.redisInstanceId, arr);
+    }
+    return map;
+  }, [queues]);
+
+  const summary = useMemo(() => {
+    let totalActive = 0,
+      totalWaiting = 0,
+      totalDelayed = 0,
+      totalFailed = 0,
+      totalThroughput = 0,
+      totalCompleted = 0,
+      totalProcessed = 0;
+
+    for (const q of queues) {
+      totalActive += q.counts.active;
+      totalWaiting += q.counts.waiting;
+      totalDelayed += q.counts.delayed;
+      totalFailed += q.counts.failed;
+      const m = liveMetrics[`${q.redisInstanceId}:${q.name}`];
+      if (m) {
+        totalThroughput += m.throughputPerMinute;
+        totalCompleted += m.completedInWindow;
+        totalProcessed += m.totalInWindow;
+      }
+    }
+
+    const failureRate =
+      totalProcessed > 0
+        ? (totalProcessed - totalCompleted) / totalProcessed
+        : null;
+
+    return {
+      totalActive,
+      backlog: totalWaiting + totalDelayed,
+      totalFailed,
+      totalThroughput,
+      failureRate,
+    };
+  }, [queues, liveMetrics]);
+
   const isLoading = redisQuery.isLoading || queuesQuery.isLoading;
+  const metricsReady = Object.keys(liveMetrics).length > 0;
 
   if (isLoading) {
     return (
       <div className="flex h-full flex-col">
-        <div className="border-b border-border px-6 py-4">
-          <Skeleton className="h-6 w-32" />
+        <div className="border-b border-border px-4 py-3">
+          <Skeleton className="h-5 w-28" />
         </div>
-        <div className="flex-1 p-6">
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 rounded" />
+        <div className="space-y-4 p-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-lg" />
+            ))}
+          </div>
+          <div className="space-y-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 rounded-lg" />
             ))}
           </div>
         </div>
@@ -284,155 +511,93 @@ function StatsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-3 border-b border-border px-6 py-4">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
         <BarChart2Icon className="size-4 text-muted-foreground" />
-        <h1 className="text-sm font-semibold">Queue Stats</h1>
-        <span className="ml-auto text-xs text-muted-foreground">
-          {queues.length} queue{queues.length !== 1 ? "s" : ""}
-        </span>
+        <h1 className="text-sm font-semibold">Stats</h1>
+        {redisInstances.length > 0 && (
+          <span className="ml-auto text-xs text-muted-foreground">
+            {redisInstances.length} instance
+            {redisInstances.length !== 1 ? "s" : ""}
+          </span>
+        )}
       </div>
 
-      {queues.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-          No queues discovered yet.
-        </div>
-      ) : (
-        <ScrollArea className="flex-1">
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 z-10 bg-muted/40 backdrop-blur-sm">
-              <tr className="border-b border-border text-left">
-                <th className={cn(thClass, "pl-6")}>Queue</th>
-                <th className={cn(thClass, "text-right")}>Waiting</th>
-                <th className={cn(thClass, "text-right")}>Active</th>
-                <th className={cn(thClass, "text-right")}>Delayed</th>
-                <th className={cn(thClass, "text-right")}>Failed</th>
-                <th className={cn(thClass, "text-right")}>Throughput</th>
-                <th className={cn(thClass, "text-right")}>Failure Rate</th>
-                <th className={cn(thClass, "text-right")}>P95</th>
-                <th className={cn(thClass, "pr-6")}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {queues.map((queue) => {
-                const key = `${queue.redisInstanceId}:${queue.name}`;
-                const m = liveMetrics[key];
-                const isSelected = selectedKey === key;
+      <ScrollArea className="flex-1">
+        <div className="space-y-4 p-4">
+          {queues.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <SummaryCard
+                label="Active"
+                value={fmt(summary.totalActive)}
+                sub="currently processing"
+                icon={ActivityIcon}
+                tone={summary.totalActive > 0 ? "blue" : "default"}
+                loading={isLoading}
+              />
+              <SummaryCard
+                label="Backlog"
+                value={fmt(summary.backlog)}
+                sub="waiting + delayed"
+                icon={ClockIcon}
+                tone={summary.backlog > 100 ? "amber" : "default"}
+                loading={isLoading}
+              />
+              <SummaryCard
+                label="Throughput"
+                value={metricsReady ? fmtThroughput(summary.totalThroughput) : "—"}
+                sub="across all queues · 5m"
+                icon={ZapIcon}
+                loading={isLoading}
+              />
+              <SummaryCard
+                label="Failure rate"
+                value={
+                  metricsReady && summary.failureRate != null
+                    ? fmtRate(summary.failureRate)
+                    : "—"
+                }
+                sub="5m window"
+                icon={TrendingDownIcon}
+                tone={
+                  summary.failureRate == null
+                    ? "default"
+                    : summary.failureRate >= 0.05
+                      ? "destructive"
+                      : summary.failureRate > 0
+                        ? "amber"
+                        : "emerald"
+                }
+                loading={isLoading}
+              />
+            </div>
+          )}
 
-                return (
-                  <>
-                    <tr
-                      key={key}
-                      className={cn(
-                        "group cursor-pointer border-b border-border/60 transition-colors last:border-0",
-                        isSelected
-                          ? "bg-muted/60"
-                          : "hover:bg-muted/40",
-                      )}
-                      onClick={() =>
-                        setSelectedKey(isSelected ? null : key)
-                      }
-                    >
-                      <td className={cn(tdClass, "pl-6")}>
-                        <span className="font-medium">{queue.name}</span>
-                      </td>
-                      <td
-                        className={cn(
-                          tdClass,
-                          "text-right font-mono tabular-nums",
-                          queue.counts.waiting > 0
-                            ? "text-foreground"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {fmt(queue.counts.waiting)}
-                      </td>
-                      <td
-                        className={cn(
-                          tdClass,
-                          "text-right font-mono tabular-nums",
-                          queue.counts.active > 0
-                            ? "text-blue-600 dark:text-blue-400"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {fmt(queue.counts.active)}
-                      </td>
-                      <td
-                        className={cn(
-                          tdClass,
-                          "text-right font-mono tabular-nums",
-                          queue.counts.delayed > 0
-                            ? "text-amber-600 dark:text-amber-400"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {fmt(queue.counts.delayed)}
-                      </td>
-                      <td
-                        className={cn(
-                          tdClass,
-                          "text-right font-mono tabular-nums",
-                          queue.counts.failed > 0
-                            ? "text-destructive font-medium"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {fmt(queue.counts.failed)}
-                      </td>
-                      <td
-                        className={cn(
-                          tdClass,
-                          "text-right font-mono tabular-nums text-muted-foreground",
-                        )}
-                      >
-                        {m ? fmtThroughput(m.throughputPerMinute) : "—"}
-                      </td>
-                      <td
-                        className={cn(
-                          tdClass,
-                          "text-right font-mono tabular-nums",
-                          m && m.failureRate > 0.05
-                            ? "text-destructive"
-                            : m && m.failureRate > 0
-                              ? "text-amber-600 dark:text-amber-400"
-                              : "text-muted-foreground",
-                        )}
-                      >
-                        {m ? fmtRate(m.failureRate) : "—"}
-                      </td>
-                      <td
-                        className={cn(
-                          tdClass,
-                          "text-right font-mono tabular-nums text-muted-foreground",
-                        )}
-                      >
-                        {m ? fmtMs(m.p95RuntimeMs) : "—"}
-                      </td>
-                      <td className={cn(tdClass, "pr-6")}>
-                        <QueueStatusChip
-                          status={(queue.isPaused ? "paused" : "running") as QueueStatus}
-                        />
-                      </td>
-                    </tr>
-                    {isSelected && (
-                      <tr key={`${key}-detail`} className="border-b border-border/60 bg-muted/20">
-                        <td colSpan={9} className="p-0">
-                          <div className="px-2 py-1">
-                            <p className="mb-2 px-2 pt-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                              Last 24 hours — {queue.name}
-                            </p>
-                            <QueueHistoryPanel queue={queue} />
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-            </tbody>
-          </table>
-        </ScrollArea>
-      )}
+          {redisInstances.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border py-16 text-center">
+              <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                <InboxIcon className="size-4 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium">No Redis instances</p>
+              <p className="max-w-xs text-xs text-muted-foreground">
+                Connect a Redis instance in Settings to start monitoring queues.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {redisInstances.map((redis) => (
+                <InstanceSection
+                  key={redis.id}
+                  redis={redis}
+                  queues={queuesByInstance.get(redis.id) ?? []}
+                  liveMetrics={liveMetrics}
+                  workspaceId={workspaceId}
+                  environmentId={environmentId}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

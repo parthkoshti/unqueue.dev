@@ -54,6 +54,7 @@ export type QueueMeta = {
   name: string;
   isPaused: boolean;
   counts: QueueCounts;
+  workers: number;
 };
 
 export type RedisInstanceConfig = {

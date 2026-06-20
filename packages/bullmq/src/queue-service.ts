@@ -16,7 +16,8 @@ export async function getQueueMeta(
     queueName,
     prefix,
     async (queue) => {
-    const [counts, isPaused] = await Promise.all([
+    const workerKey = `${prefix}:${queueName}:workers`;
+    const [counts, isPaused, workerCount] = await Promise.all([
       queue.getJobCounts(
         "waiting",
         "active",
@@ -29,6 +30,7 @@ export async function getQueueMeta(
         "repeat",
       ),
       queue.isPaused(),
+      connection.hlen(workerKey),
     ]);
 
     const typedCounts = counts as Record<string, number>;
@@ -36,6 +38,7 @@ export async function getQueueMeta(
     return {
       name: queueName,
       isPaused,
+      workers: workerCount,
       counts: {
         waiting: typedCounts.waiting ?? 0,
         active: typedCounts.active ?? 0,
@@ -268,7 +271,7 @@ function parseLogLine(line: string): ParsedLog {
 // Note: BullMQ v5 deprecated a "0:"-prefixed tail marker in the wait/paused
 // lists (to be removed in v6). Fresh v5 queues don't have it. We skip the
 // marker correction here since it's a minor off-by-1 on a legacy edge case.
-const FIELDS_PER_QUEUE = 10;
+const FIELDS_PER_QUEUE = 11;
 
 export async function getQueueMetaBatch(
   connection: RedisConnection,
@@ -290,6 +293,7 @@ export async function getQueueMetaBatch(
     pipeline.zcard(k("waiting-children"));  // 7 waiting-children
     pipeline.zcard(k("repeat"));            // 8 schedulers
     pipeline.hexists(k("meta"), "paused");  // 9 isPaused
+    pipeline.hlen(k("workers"));            // 10 workers
   }
 
   const results = await pipeline.exec();
@@ -316,6 +320,6 @@ export async function getQueueMetaBatch(
       "waiting-children": num(o + 7),
       schedulers: num(o + 8),
     };
-    return { name, isPaused: bool(o + 9), counts };
+    return { name, isPaused: bool(o + 9), workers: num(o + 10), counts };
   });
 }

@@ -219,6 +219,8 @@ export const queueMetricSnapshots = pgTable(
     completedInWindow: integer("completed_in_window").notNull().default(0),
     failedInWindow: integer("failed_in_window").notNull().default(0),
     stalledCount: integer("stalled_count").notNull().default(0),
+    p95WaitMs: integer("p95_wait_ms").notNull().default(0),
+    addedInWindow: integer("added_in_window").notNull().default(0),
   },
   (table) => [
     index("queue_metric_snapshots_lookup_idx").on(

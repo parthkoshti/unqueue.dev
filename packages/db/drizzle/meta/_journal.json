@@ -43,6 +43,20 @@
       "when": 1781974335341,
       "tag": "0005_tiny_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1750550400000,
+      "tag": "0006_queue_metrics_wait",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781983956873,
+      "tag": "0007_cute_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

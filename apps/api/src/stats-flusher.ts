@@ -52,7 +52,9 @@ export class StatsFlusher {
         p95RuntimeMs: m.p95RuntimeMs,
         completedInWindow: m.completedInWindow,
         failedInWindow: m.failedInWindow,
+        addedInWindow: m.addedInWindow,
         stalledCount: m.stalledCount,
+        p95WaitMs: m.p95WaitMs,
       };
     });
 
