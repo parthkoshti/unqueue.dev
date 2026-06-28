@@ -614,6 +614,7 @@ function QueuePage() {
               selected={selected}
               activeJobId={sheetJobId}
               emptyState={isEmpty ? getQueueTabEmptyState(state) : undefined}
+              scrollRef={scrollRef}
               onToggleSelect={toggleSelect}
               onToggleSelectAll={toggleSelectAll}
               onOpenJob={openJobSheet}

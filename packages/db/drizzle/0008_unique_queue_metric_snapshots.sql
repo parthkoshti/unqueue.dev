@@ -1,0 +1,2 @@
+DROP INDEX "queue_metric_snapshots_lookup_idx";--> statement-breakpoint
+CREATE UNIQUE INDEX "queue_metric_snapshots_unique_idx" ON "queue_metric_snapshots" USING btree ("redis_instance_id","queue_name","snapshot_at");

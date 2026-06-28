@@ -223,7 +223,7 @@ export const queueMetricSnapshots = pgTable(
     addedInWindow: integer("added_in_window").notNull().default(0),
   },
   (table) => [
-    index("queue_metric_snapshots_lookup_idx").on(
+    uniqueIndex("queue_metric_snapshots_unique_idx").on(
       table.redisInstanceId,
       table.queueName,
       table.snapshotAt,

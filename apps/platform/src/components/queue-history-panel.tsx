@@ -34,7 +34,10 @@ function fmt(n: number) {
 
 function fmtRate(r: number) {
   const pct = r * 100;
-  return `${pct < 1 && pct > 0 ? "<1" : Math.round(pct).toString()}%`;
+  if (pct === 0) return "0%";
+  if (pct < 0.1) return "<0.1%";
+  if (pct < 10) return `${pct.toFixed(1)}%`;
+  return `${Math.round(pct)}%`;
 }
 
 function fmtThroughput(n: number) {
@@ -75,24 +78,68 @@ function xTicks(rows: SnapshotRow[]): number[] {
 const CHART_MARGIN = { top: 4, right: 4, left: 4, bottom: 0 };
 const Y_AXIS_WIDTH = 44;
 const CHART_HEIGHT = 90;
+const RATE_DOMAIN_STEPS = [
+  0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1,
+];
 const TICK_STYLE: React.CSSProperties = {
   fontSize: 9,
   fill: "var(--muted-foreground)",
   fontFamily: "var(--font-mono, monospace)",
 };
 
-function XTick({ x, y, payload, formatter }: { x?: number; y?: number; payload?: { value: number }; formatter: (v: number) => string }) {
+type TickCoord = string | number | undefined;
+
+function tickCoord(value: TickCoord): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function failureRateDomainMax(rows: SnapshotRow[]): number {
+  const maxRate = Math.max(0, ...rows.map((r) => r.failureRate));
+  if (maxRate === 0) return 0.01;
+
+  const paddedMax = maxRate * 1.15;
+  return RATE_DOMAIN_STEPS.find((step) => paddedMax <= step) ?? 1;
+}
+
+function XTick({
+  x,
+  y,
+  payload,
+  formatter,
+}: {
+  x?: TickCoord;
+  y?: TickCoord;
+  payload?: { value: string | number };
+  formatter: (v: number) => string;
+}) {
   return (
-    <text x={x} y={(y ?? 0) + 4} textAnchor="middle" style={TICK_STYLE}>
-      {formatter(payload?.value ?? 0)}
+    <text x={tickCoord(x)} y={tickCoord(y) + 4} textAnchor="middle" style={TICK_STYLE}>
+      {formatter(Number(payload?.value ?? 0))}
     </text>
   );
 }
 
-function YTick({ x, y, payload, formatter }: { x?: number; y?: number; payload?: { value: number }; formatter: (v: number) => string }) {
+function YTick({
+  x,
+  y,
+  payload,
+  formatter,
+}: {
+  x?: TickCoord;
+  y?: TickCoord;
+  payload?: { value: string | number };
+  formatter: (v: number) => string;
+}) {
   return (
-    <text x={(x ?? 0) - 2} y={y} textAnchor="end" dominantBaseline="middle" style={TICK_STYLE}>
-      {formatter(payload?.value ?? 0)}
+    <text
+      x={tickCoord(x) - 2}
+      y={tickCoord(y)}
+      textAnchor="end"
+      dominantBaseline="middle"
+      style={TICK_STYLE}
+    >
+      {formatter(Number(payload?.value ?? 0))}
     </text>
   );
 }
@@ -303,6 +350,7 @@ function QueueDepthChart({ rows }: { rows: SnapshotRow[] }) {
 
 function FailureRateChart({ rows }: { rows: SnapshotRow[] }) {
   const ticks = xTicks(rows);
+  const yMax = failureRateDomainMax(rows);
   const rangeMs =
     rows.length >= 2
       ? new Date(rows.at(-1)!.snapshotAt).getTime() -
@@ -321,12 +369,12 @@ function FailureRateChart({ rows }: { rows: SnapshotRow[] }) {
           <linearGradient id="failFill" x1="0" y1="0" x2="0" y2="1">
             <stop
               offset="5%"
-              stopColor="hsl(var(--destructive))"
+              stopColor="var(--color-destructive)"
               stopOpacity={0.15}
             />
             <stop
               offset="95%"
-              stopColor="hsl(var(--destructive))"
+              stopColor="var(--color-destructive)"
               stopOpacity={0}
             />
           </linearGradient>
@@ -348,7 +396,8 @@ function FailureRateChart({ rows }: { rows: SnapshotRow[] }) {
         />
         <YAxis
           tick={(props) => <YTick {...props} formatter={fmtRate} />}
-          domain={[0, 1]}
+          domain={[0, yMax]}
+          ticks={[0, yMax / 2, yMax]}
           axisLine={false}
           tickLine={false}
           width={Y_AXIS_WIDTH}
@@ -362,7 +411,7 @@ function FailureRateChart({ rows }: { rows: SnapshotRow[] }) {
           type="monotone"
           dataKey="rate"
           name="failure rate"
-          stroke="hsl(var(--destructive))"
+          stroke="var(--color-destructive)"
           strokeWidth={1.5}
           fill="url(#failFill)"
           dot={false}

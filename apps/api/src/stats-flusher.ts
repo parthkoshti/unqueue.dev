@@ -59,7 +59,7 @@ export class StatsFlusher {
     });
 
     try {
-      await this.db.insert(queueMetricSnapshots).values(rows);
+      await this.db.insert(queueMetricSnapshots).values(rows).onConflictDoNothing();
       this.logger.debug({ count: rows.length }, "Flushed queue metric snapshots");
     } catch (err) {
       this.logger.error({ err }, "Failed to flush queue metric snapshots");

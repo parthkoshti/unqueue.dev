@@ -1,3 +1,4 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { InboxIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatJobAttemptsLabel } from "@/lib/format-job-attempts";
@@ -162,11 +163,14 @@ export function QueueJobsTableSkeleton({
   );
 }
 
+const ROW_HEIGHT = 41;
+
 export function QueueJobsTable({
   jobs,
   selected,
   activeJobId,
   emptyState,
+  scrollRef,
   onToggleSelect,
   onToggleSelectAll,
   onOpenJob,
@@ -178,6 +182,7 @@ export function QueueJobsTable({
     title: string;
     description: string;
   };
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll?: () => void;
   onOpenJob: (id: string) => void;
@@ -187,6 +192,21 @@ export function QueueJobsTable({
   const someSelected =
     jobs.some((job) => selected.has(job.id)) && !allSelected;
   const showSelectAll = jobs.length > 0 && onToggleSelectAll;
+
+  const virtualizer = useVirtualizer({
+    count: jobs.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+
+  const virtualItems = virtualizer.getVirtualItems();
+  const totalSize = virtualizer.getTotalSize();
+  const paddingTop = virtualItems.length > 0 ? (virtualItems[0]?.start ?? 0) : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? totalSize - (virtualItems[virtualItems.length - 1]?.end ?? 0)
+      : 0;
 
   return (
     <table className="w-full text-xs">
@@ -202,13 +222,21 @@ export function QueueJobsTable({
             description={emptyState.description}
           />
         ) : null}
-        {jobs.map((job) => {
+        {paddingTop > 0 && (
+          <tr style={{ height: paddingTop }}>
+            <td colSpan={COLUMN_COUNT} />
+          </tr>
+        )}
+        {virtualItems.map((virtualItem) => {
+          const job = jobs[virtualItem.index]!;
           const isSelected = selected.has(job.id);
           const isActive = activeJobId === job.id;
 
           return (
             <tr
               key={job.id}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
               className={cn(
                 "group cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-muted/40",
                 isActive && "bg-accent/60 hover:bg-accent/60",
@@ -259,6 +287,11 @@ export function QueueJobsTable({
             </tr>
           );
         })}
+        {paddingBottom > 0 && (
+          <tr style={{ height: paddingBottom }}>
+            <td colSpan={COLUMN_COUNT} />
+          </tr>
+        )}
       </tbody>
     </table>
   );

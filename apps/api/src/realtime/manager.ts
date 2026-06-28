@@ -594,24 +594,30 @@ export class RealtimeManager {
 
   private onCompleted(redisId: string, args: Record<string, unknown>): void {
     const queueName = String(args.queueName ?? "");
+    const jobId = String(args.jobId ?? "");
 
-    let runtimeMs = 0;
-    let waitMs = 0;
-    if (
-      typeof args.processedOn === "number" &&
-      typeof args.finishedOn === "number"
-    ) {
-      runtimeMs = args.finishedOn - args.processedOn;
-    }
-    if (
-      typeof args.processedOn === "number" &&
-      typeof args.timestamp === "number" &&
-      args.processedOn > args.timestamp
-    ) {
-      waitMs = args.processedOn - (args.timestamp as number);
-    }
+    // BullMQ QueueEvents `completed` only provides { jobId, returnvalue, prev } —
+    // timing fields are not in the event payload. Fetch the job to get them.
+    void (async () => {
+      let runtimeMs = 0;
+      let waitMs = 0;
+      try {
+        const { connection, prefix } = this.getConnection(redisId);
+        const job = await getJobState(connection, queueName, prefix, jobId);
+        if (job) {
+          if (typeof job.processedOn === "number" && typeof job.finishedOn === "number") {
+            runtimeMs = job.finishedOn - job.processedOn;
+          }
+          if (typeof job.processedOn === "number" && typeof job.timestamp === "number" && job.processedOn > job.timestamp) {
+            waitMs = job.processedOn - job.timestamp;
+          }
+        }
+      } catch {
+        // job may be gone if removeOnComplete is immediate; record with 0 timing
+      }
+      this.metrics.recordCompletion(redisId, queueName, runtimeMs, waitMs, true);
+    })();
 
-    this.metrics.recordCompletion(redisId, queueName, runtimeMs, waitMs, true);
     this.onJobEvent(redisId, args, "completed");
   }
 

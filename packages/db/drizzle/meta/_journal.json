@@ -57,6 +57,13 @@
       "when": 1781983956873,
       "tag": "0007_cute_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782661469961,
+      "tag": "0008_unique_queue_metric_snapshots",
+      "breakpoints": true
     }
   ]
 }
